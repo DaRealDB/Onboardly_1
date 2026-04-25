@@ -34,11 +34,10 @@ export default function AuthLayout({
           
           <div className="space-y-6">
             <blockquote className="text-xl font-medium leading-relaxed">
-              &quot;Onboardly transformed our client onboarding from a 2-week nightmare into a 3-day breeze. Our clients love the seamless experience.&quot;
+              &quot;"Security is a metric, but confidence is a feeling. We didn’t just build a login; we built a professional handshake. Onboardly’s entry point is designed to be a silent partner—impenetrable to threats, yet completely invisible to your growth. Welcome to a workspace that respects your time as much as your reputation.&quot;
             </blockquote>
             <div>
-              <p className="font-semibold">Sarah Chen</p>
-              <p className="text-primary-foreground/80 text-sm">Operations Director, TechStart Legal</p>
+              <p className="font-semibold">- Anchorly Team</p>
             </div>
           </div>
 

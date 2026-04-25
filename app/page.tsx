@@ -105,7 +105,7 @@ export default function LandingPage() {
                 href="/auth/signup"
                 className="bg-white text-[#0F172A] px-8 py-4 rounded-xl font-semibold text-lg border border-slate-200 hover:border-slate-300 transition-colors flex items-center gap-2"
               >
-                <Play className="w-4 h-4" /> Book a Demo
+                <Play className="w-4 h-4" /> View Demo
               </Link>
             </div>
           </div>
@@ -727,7 +727,7 @@ export default function LandingPage() {
               href="/auth/signup"
               className="border border-white text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors"
             >
-              Schedule a Demo
+              View Demo
             </Link>
           </div>
 

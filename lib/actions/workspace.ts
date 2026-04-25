@@ -153,7 +153,34 @@ export async function provisionWorkspace(input: ProvisionWorkspaceInput): Promis
     return { success: false, error: tenantError.message }
   }
 
-  // The trigger will add the user as owner in team_members
+  // Verify the trigger added the user as owner in team_members
+  // This is critical - the RLS SELECT policy on tenants depends on this row existing
+  const { data: memberCheck, error: memberError } = await supabase
+    .from('team_members')
+    .select('id')
+    .eq('tenant_id', tenant.id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (memberError || !memberCheck) {
+    // If trigger didn't fire, manually insert the team_members row
+    console.warn('[provisionWorkspace] Trigger did not create team_members row, inserting manually')
+    const { error: manualInsertError } = await supabase
+      .from('team_members')
+      .insert({
+        tenant_id: tenant.id,
+        user_id: user.id,
+        role: 'owner',
+      })
+
+    if (manualInsertError) {
+      console.error('[provisionWorkspace] Failed to create team_members row:', manualInsertError)
+      // Clean up the orphaned tenant
+      await supabase.from('tenants').delete().eq('id', tenant.id)
+      return { success: false, error: 'Failed to assign workspace owner. Please try again.' }
+    }
+  }
+
   // Now seed the workflow templates for this industry
   const templates = GLOBAL_WORKFLOW_TEMPLATES[input.industry] || GLOBAL_WORKFLOW_TEMPLATES.general
 
