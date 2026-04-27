@@ -1,37 +1,44 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useAuth } from '@/lib/providers'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
-import { toast } from 'sonner'
+import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/providers";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const { signIn } = useAuth()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
-    const { error } = await signIn(email, password)
-    
+    const { error } = await signIn(email, password);
+
     if (error) {
-      setError(error)
-      toast.error('Sign in failed', { description: error })
-      setIsLoading(false)
+      setError(error);
+      toast.error("Sign in failed", { description: error });
+      setIsLoading(false);
     } else {
-      toast.success('Welcome back!', { description: 'Redirecting...' })
+      toast.success("Welcome back!", { description: "Redirecting..." });
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -71,7 +78,7 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -84,16 +91,16 @@ export default function LoginPage() {
                 autoComplete="email"
               />
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link 
-                  href="/auth/forgot-password" 
+                {/* <Link
+                  href="/auth/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
-                </Link>
+                </Link> */}
               </div>
               <Input
                 id="password"
@@ -113,7 +120,7 @@ export default function LoginPage() {
                   Signing in...
                 </>
               ) : (
-                'Sign in'
+                "Sign in"
               )}
             </Button>
           </form>
@@ -136,17 +143,6 @@ export default function LoginPage() {
           </Link>
         </CardFooter>
       </Card>
-
-      <p className="text-center text-sm text-muted-foreground">
-        By signing in, you agree to our{' '}
-        <Link href="/terms" className="text-primary hover:underline">
-          Terms of Service
-        </Link>{' '}
-        and{' '}
-        <Link href="/privacy" className="text-primary hover:underline">
-          Privacy Policy
-        </Link>
-      </p>
     </div>
-  )
+  );
 }
