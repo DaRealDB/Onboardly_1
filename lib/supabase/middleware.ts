@@ -80,20 +80,18 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (isAdminPath && user) {
-    // Check if user is a super admin
-    const { data: superAdmin } = await supabase
-      .from('super_admins')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
+  const { data: superAdmin } = await supabase
+    .from('super_admins')
+    .select('id')
+    .eq('id', user.id)
+    .single()
 
-    if (!superAdmin) {
-      // Not a super admin, redirect to dashboard
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
+  if (!superAdmin) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
   }
+}
 
   // Redirect logged in users away from auth pages to dashboard
   const authPaths = ['/auth/login', '/auth/signup']

@@ -1,7 +1,7 @@
 export default function AuthLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <div className="min-h-screen flex">
@@ -31,10 +31,15 @@ export default function AuthLayout({
               <span className="text-2xl font-bold">Onboardly</span>
             </div>
           </div>
-          
+
           <div className="space-y-6">
             <blockquote className="text-xl font-medium leading-relaxed">
-              &quot;"Security is a metric, but confidence is a feeling. We didn’t just build a login; we built a professional handshake. Onboardly’s entry point is designed to be a silent partner—impenetrable to threats, yet completely invisible to your growth. Welcome to a workspace that respects your time as much as your reputation.&quot;
+              &quot;It is one thing to have good security, but it is another to
+              make your clients actually feel safe. We built a login experience
+              that feels like a warm welcome rather than a strict security
+              checkpoint. Onboardly works quietly in the background to protect
+              your data without ever slowing down your progress. Welcome to a
+              workspace that values your time just as much as your image.&quot;
             </blockquote>
             <div>
               <p className="font-semibold">- Anchorly Team</p>
@@ -42,30 +47,15 @@ export default function AuthLayout({
           </div>
 
           <div className="flex items-center gap-8 text-primary-foreground/60 text-sm">
-            <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <path d="m9 11 3 3L22 4" />
-              </svg>
-              <span>SOC 2 Compliant</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              <span>256-bit Encryption</span>
-            </div>
+            <div className="flex items-center gap-2"></div>
           </div>
         </div>
       </div>
 
       {/* Right side - Auth Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md">
-          {children}
-        </div>
+        <div className="w-full max-w-md">{children}</div>
       </div>
     </div>
-  )
+  );
 }
