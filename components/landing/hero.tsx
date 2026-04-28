@@ -97,7 +97,6 @@ export default function Hero() {
               className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#64748B]"
             >
               {[
-                "No credit card required",
                 "14-day free trial",
                 "Cancel anytime",
               ].map((t) => (

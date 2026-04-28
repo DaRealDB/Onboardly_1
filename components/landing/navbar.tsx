@@ -36,7 +36,6 @@ export default function Navbar({ navHidden }: NavbarProps) {
             {[
               ["Features", "#features"],
               ["How It Works", "#how-it-works"],
-              ["Pricing", "#pricing"],
               ["Case Studies", "#case-studies"],
             ].map(([label, href]) => (
               <a
@@ -86,7 +85,6 @@ export default function Navbar({ navHidden }: NavbarProps) {
               {[
                 ["Features", "#features"],
                 ["How It Works", "#how-it-works"],
-                ["Pricing", "#pricing"],
                 ["Case Studies", "#case-studies"],
               ].map(([label, href]) => (
                 <a

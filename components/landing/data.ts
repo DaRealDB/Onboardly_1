@@ -4,8 +4,6 @@ export const LOGOS = [
   "Apex Legal Group",
   "Summit Financial",
   "Meridian Consulting",
-  "Sterling Creative",
-  "Atlas Advisory",
   "Fortis Law Partners",
   "Nova Strategy",
   "Pinnacle Group",
@@ -58,100 +56,6 @@ export const SECONDARY_FEATURES = [
   },
 ];
 
-export const TESTIMONIALS = [
-  {
-    quote:
-      "Onboardly transformed how we onboard new clients. What used to take weeks of back-and-forth emails now completes in under 48 hours. Our clients comment on how professional the experience feels — and that trust translates directly into retainer renewals.",
-    name: "Sarah Chen",
-    role: "Managing Partner",
-    company: "Chen & Associates Law",
-    initials: "SC",
-  },
-  {
-    quote:
-      "The white-labeling is flawless. Clients have no idea they're using a third-party tool — it just looks like our firm's portal.",
-    name: "Marcus Webb",
-    role: "CEO",
-    company: "Webb Financial Group",
-    initials: "MW",
-  },
-  {
-    quote:
-      "We've reclaimed 15+ hours per client onboarded. That's directly billable time back in our pocket every single month.",
-    name: "Diana Reyes",
-    role: "Operations Director",
-    company: "Reyes Creative Agency",
-    initials: "DR",
-  },
-  {
-    quote:
-      "Setup took 20 minutes. First client through the portal the same day. The ROI was immediate.",
-    name: "James Whitmore",
-    role: "Principal Consultant",
-    company: "Whitmore Consulting",
-    initials: "JW",
-  },
-];
-
-export const PRICING_PLANS = [
-  {
-    name: "Starter",
-    monthlyPrice: 1499,
-    yearlyPrice: 14990,
-    description: "Perfect for solo practitioners and small teams",
-    cta: "Start Free Trial",
-    ctaHref: "/auth/signup",
-    highlight: false,
-    features: [
-      { text: "Up to 5 active clients", included: true },
-      { text: "Basic white-labeling (logo + colors)", included: true },
-      { text: "Secure document vault (50GB)", included: true },
-      { text: "E-signature workflows", included: true },
-      { text: "Email support", included: true },
-      { text: "Standard templates", included: true },
-      { text: "Strict Mode policy enforcement", included: false },
-      { text: "Custom domain", included: false },
-    ],
-  },
-  {
-    name: "Professional",
-    monthlyPrice: 3999,
-    yearlyPrice: 39990,
-    description: "For growing firms managing multiple clients",
-    cta: "Start Free Trial",
-    ctaHref: "/auth/signup",
-    highlight: true,
-    features: [
-      { text: "Up to 25 active clients", included: true },
-      { text: "Full white-labeling + CSS variables", included: true },
-      { text: "Secure document vault (500GB)", included: true },
-      { text: "E-signature workflows", included: true },
-      { text: "Strict & Parallel Mode", included: true },
-      { text: "Automated client reminders", included: true },
-      { text: "Priority support", included: true },
-      { text: "Real-time analytics dashboard", included: true },
-    ],
-  },
-  {
-    name: "Enterprise",
-    monthlyPrice: 15999,
-    yearlyPrice: 159990,
-    description: "For established firms demanding total control",
-    cta: "Book a Demo",
-    ctaHref: "/auth/signup",
-    highlight: false,
-    features: [
-      { text: "Unlimited active clients", included: true },
-      { text: "Complete white-labeling + CSS engine", included: true },
-      { text: "Unlimited storage", included: true },
-      { text: "Custom domain + auto SSL", included: true },
-      { text: "Dedicated account manager", included: true },
-      { text: "Custom API integrations", included: true },
-      { text: "SSO/SAML authentication", included: true },
-      { text: "99.9% SLA uptime guarantee", included: true },
-    ],
-  },
-];
 
 export const FAQS = [
   {
