@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/lib/providers'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from 'sonner'
 import './globals.css'
 
@@ -13,7 +14,6 @@ export const metadata: Metadata = {
     template: '%s | Onboardly',
   },
   description: 'Streamline your client onboarding with customizable workflows, document collection, and real-time progress tracking.',
-  keywords: ['onboarding', 'client management', 'workflows', 'document collection', 'SaaS'],
 }
 
 export const viewport: Viewport = {
@@ -28,12 +28,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
-      <body className={`${inter.className} antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
-        <Toaster position="top-right" richColors />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} antialiased bg-background text-foreground`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"   
+          disableTransitionOnChange
+        >
+          <Providers>
+            {children}
+          </Providers>
+          <Toaster position="top-right" richColors />
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
