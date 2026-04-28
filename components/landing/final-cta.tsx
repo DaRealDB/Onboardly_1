@@ -69,7 +69,6 @@ export default function FinalCTA() {
           className="mt-8 flex flex-wrap items-center justify-center gap-8 text-slate-400 text-sm"
         >
           {[
-            "No credit card required",
             "Setup in under 10 minutes",
             "Cancel anytime, no questions asked",
           ].map((t) => (
