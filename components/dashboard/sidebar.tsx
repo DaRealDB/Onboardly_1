@@ -11,8 +11,19 @@ import {
   Activity,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/lib/providers";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SidebarProps {
   activeSection: string;
@@ -30,6 +41,10 @@ const navItems = [
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
+  // Get first 2 letters of email for the avatar, fallback to 'SA'
+  const initials = user?.email?.substring(0, 2).toUpperCase() || "SA";
 
   return (
     <>
@@ -100,23 +115,39 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="px-4 py-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-              <span className="text-xs font-medium text-secondary-foreground">
-                SA
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-primary truncate">
-                Super Admin
-              </p>
-              <p className="text-xs text-sidebar-foreground truncate">
-                admin@onboardly.io
-              </p>
-            </div>
-          </div>
+        {/* Interactive User Menu Footer */}
+        <div className="p-4 border-t border-sidebar-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent h-auto py-2"
+              >
+                <div className="w-8 h-8 bg-sidebar-accent rounded-full flex items-center justify-center text-sm font-medium shrink-0">
+                  {initials}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-sidebar-primary truncate">
+                    Super Admin
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">
+                    {user?.email || "Loading..."}
+                  </p>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={signOut}
+                className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
     </>
