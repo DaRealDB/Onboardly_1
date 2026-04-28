@@ -41,7 +41,7 @@ export default function FinalCTA() {
           variants={fadeUp}
           className="mt-6 text-lg text-slate-300 max-w-2xl mx-auto"
         >
-          Join 1,200+ professional service firms who&apos;ve reclaimed their
+          Join professional service firms who&apos;ve reclaimed their
           time, impressed their clients, and protected their margins with
           Onboardly.
         </motion.p>
@@ -69,7 +69,6 @@ export default function FinalCTA() {
           className="mt-8 flex flex-wrap items-center justify-center gap-8 text-slate-400 text-sm"
         >
           {[
-            "No credit card required",
             "Setup in under 10 minutes",
             "Cancel anytime, no questions asked",
           ].map((t) => (

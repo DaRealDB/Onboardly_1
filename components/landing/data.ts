@@ -5,8 +5,6 @@ export const LOGOS = [
   "Summit Financial",
   "Meridian Consulting",
   "Sterling Creative",
-  "Atlas Advisory",
-  "Fortis Law Partners",
   "Nova Strategy",
   "Pinnacle Group",
 ];

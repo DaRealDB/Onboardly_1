@@ -97,7 +97,6 @@ export default function Hero() {
               className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#64748B]"
             >
               {[
-                "No credit card required",
                 "14-day free trial",
                 "Cancel anytime",
               ].map((t) => (
@@ -241,52 +240,6 @@ export default function Hero() {
                   </div>
                 </div>
               </div>
-
-              {/* Floating card — top-right */}
-              <motion.div
-                className="absolute -top-5 -right-8 bg-white rounded-xl shadow-xl border border-slate-100 px-4 py-3 flex items-center gap-3"
-                initial={{ opacity: 0, scale: 0.7, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: 1, type: "spring", stiffness: 200 }}
-              >
-                <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Check className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[#0A1628]">
-                    100% Complete
-                  </p>
-                  <p className="text-xs text-[#64748B]">Acme Law Firm</p>
-                </div>
-              </motion.div>
-
-              {/* Floating card — bottom-left */}
-              <motion.div
-                className="absolute -bottom-5 -left-8 bg-[#0A1628] rounded-xl shadow-xl px-4 py-3"
-                initial={{ opacity: 0, scale: 0.7, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: 1.2, type: "spring", stiffness: 200 }}
-              >
-                <p className="font-sora text-white text-xl font-bold">
-                  10hrs+
-                </p>
-                <p className="text-slate-400 text-xs mt-0.5">
-                  saved per client
-                </p>
-              </motion.div>
-
-              {/* Floating card — right-middle */}
-              <motion.div
-                className="absolute top-1/2 -right-10 -translate-y-1/2 bg-[#2563EB] rounded-xl shadow-xl px-4 py-3"
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.4, type: "spring", stiffness: 200 }}
-              >
-                <p className="font-sora text-white text-xl font-bold">
-                  1,200+
-                </p>
-                <p className="text-blue-100 text-xs mt-0.5">firms trust us</p>
-              </motion.div>
             </div>
           </motion.div>
         </div>
