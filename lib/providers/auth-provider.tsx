@@ -24,6 +24,9 @@ interface AuthContextType {
     password: string,
     metadata?: Record<string, unknown>,
   ) => Promise<{ error: string | null }>;
+  resendConfirmationEmail: (
+    email: string,
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isSuperAdmin: boolean;
 }
@@ -96,8 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message };
     }
 
-    // Check if user has any tenants (via team_members)
     if (data.user) {
+      // Check if email is verified
+      if (!data.user.email_confirmed_at) {
+        // Email not verified, redirect to signup-success page
+        return { error: "Please verify your email before signing in. Check your inbox for the confirmation email." };
+      }
+
+      // Check if user has any tenants (via team_members)
       const { data: teamMemberships } = await supabase
         .from("team_members")
         .select("tenant_id")
@@ -142,6 +151,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
+  const resendConfirmationEmail = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+          `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    return { error: null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsSuperAdmin(false);
@@ -157,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         signIn,
         signUp,
+        resendConfirmationEmail,
         signOut,
         isSuperAdmin,
       }}

@@ -15,7 +15,12 @@ import Footer from "../components/landing/footer";
 export default function LandingPage() {
   const [navHidden, setNavHidden] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const { scrollY, scrollYProgress } = useScroll();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useMotionValueEvent(scrollY, "change", (latest: number) => {
     const previous = scrollY.getPrevious();
@@ -89,10 +94,12 @@ export default function LandingPage() {
       `}</style>
 
       {/* ── Scroll Progress Bar ── */}
-      <motion.div
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 z-50 origin-left"
-        style={{ scaleX: scrollProgress }}
-      />
+      {mounted && (
+        <motion.div
+          className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 z-50 origin-left"
+          style={{ scaleX: scrollProgress }}
+        />
+      )}
 
       {/* ── Components ── */}
       <Navbar navHidden={navHidden} />

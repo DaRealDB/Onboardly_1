@@ -19,9 +19,15 @@ function AnimatedCounter({
 }) {
   const [count, setCount] = useState(0);
   const [triggered, setTriggered] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
@@ -35,7 +41,7 @@ function AnimatedCounter({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [triggered]);
+  }, [triggered, mounted]);
 
   useEffect(() => {
     if (!triggered) return;
@@ -54,7 +60,7 @@ function AnimatedCounter({
   return (
     <span ref={ref}>
       {prefix}
-      {count.toLocaleString()}
+      {mounted ? count.toLocaleString() : end.toLocaleString()}
       {suffix}
     </span>
   );
@@ -63,10 +69,9 @@ function AnimatedCounter({
 export default function Metrics() {
   return (
     <section className="bg-[#0A1628] py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10">
           {[
-            { label: "Firms Trust Onboardly", end: 1200, suffix: "+" },
             { label: "Hours Saved Per Client", end: 10, suffix: "hrs+" },
             { label: "Client Completion Rate", end: 98, suffix: "%" },
           ].map((m, i) => (
