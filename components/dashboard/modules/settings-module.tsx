@@ -1,13 +1,19 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { useAppStore, type Role, type TeamMember } from '@/lib/store'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Switch } from '@/components/ui/switch'
+import { useState, useRef, useEffect } from "react";
+import { useAppStore, type Role, type TeamMember } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -16,20 +22,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   User,
   Building2,
@@ -45,11 +51,11 @@ import {
   Lock,
   Save,
   Check,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function SettingsModule() {
-  const [activeTab, setActiveTab] = useState('profile')
+  const [activeTab, setActiveTab] = useState("profile");
 
   return (
     <div className="space-y-6">
@@ -94,22 +100,22 @@ export function SettingsModule() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 function ProfileTab() {
-  const { user, setUser } = useAppStore()
-  const [fullName, setFullName] = useState(user?.fullName || '')
-  const [email, setEmail] = useState(user?.email || '')
-  const [saved, setSaved] = useState(false)
+  const { user, setUser } = useAppStore();
+  const [fullName, setFullName] = useState(user?.fullName || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
     if (user) {
-      setUser({ ...user, fullName, email })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      setUser({ ...user, fullName, email });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -121,7 +127,10 @@ function ProfileTab() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-semibold">
-              {fullName.split(' ').map((n) => n[0]).join('')}
+              {fullName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
             </div>
             <Button variant="outline" size="sm">
               <Upload className="h-4 w-4 mr-2" />
@@ -171,7 +180,9 @@ function ProfileTab() {
             <Lock className="h-5 w-5" />
             Security
           </CardTitle>
-          <CardDescription>Manage your password and security settings</CardDescription>
+          <CardDescription>
+            Manage your password and security settings
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -193,19 +204,19 @@ function ProfileTab() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function OrganizationTab() {
-  const { tenant, updateTenant } = useAppStore()
-  const [companyName, setCompanyName] = useState(tenant?.companyName || '')
-  const [saved, setSaved] = useState(false)
+  const { tenant, updateTenant } = useAppStore();
+  const [companyName, setCompanyName] = useState(tenant?.companyName || "");
+  const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    updateTenant({ companyName })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
+    updateTenant({ companyName });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <Card className="border-border/50">
@@ -225,7 +236,11 @@ function OrganizationTab() {
           </div>
           <div className="space-y-2">
             <Label>Workspace URL</Label>
-            <Input value={tenant?.workspaceUrl || ''} readOnly className="bg-muted" />
+            <Input
+              value={tenant?.workspaceUrl || ""}
+              readOnly
+              className="bg-muted"
+            />
           </div>
         </div>
         <Button onClick={handleSave} className="gap-2">
@@ -243,41 +258,45 @@ function OrganizationTab() {
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function BrandTab() {
-  const { tenant, updateTenant } = useAppStore()
-  const [primaryColor, setPrimaryColor] = useState(tenant?.primaryColor || '#6366f1')
-  const [secondaryColor, setSecondaryColor] = useState(tenant?.secondaryColor || '#22c55e')
-  const [logo, setLogo] = useState(tenant?.logo || '')
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [saved, setSaved] = useState(false)
+  const { tenant, updateTenant } = useAppStore();
+  const [primaryColor, setPrimaryColor] = useState(
+    tenant?.primaryColor || "#6366f1",
+  );
+  const [secondaryColor, setSecondaryColor] = useState(
+    tenant?.secondaryColor || "#22c55e",
+  );
+  const [logo, setLogo] = useState(tenant?.logo || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (tenant) {
-      setPrimaryColor(tenant.primaryColor)
-      setSecondaryColor(tenant.secondaryColor)
-      setLogo(tenant.logo || '')
+      setPrimaryColor(tenant.primaryColor);
+      setSecondaryColor(tenant.secondaryColor);
+      setLogo(tenant.logo || "");
     }
-  }, [tenant])
+  }, [tenant]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
-        setLogo(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
+        setLogo(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleSave = () => {
-    updateTenant({ primaryColor, secondaryColor, logo: logo || undefined })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
+    updateTenant({ primaryColor, secondaryColor, logo: logo || undefined });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -300,7 +319,9 @@ function BrandTab() {
                     alt="Company logo"
                     className="h-16 w-16 object-contain rounded"
                   />
-                  <p className="text-sm text-muted-foreground">Click to change</p>
+                  <p className="text-sm text-muted-foreground">
+                    Click to change
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
@@ -388,12 +409,12 @@ function BrandTab() {
                   className="h-10 w-10 rounded flex items-center justify-center text-white font-semibold"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  {tenant?.companyName?.[0] || 'O'}
+                  {tenant?.companyName?.[0] || "O"}
                 </div>
               )}
               <div>
                 <p className="font-medium text-foreground">
-                  {tenant?.companyName || 'Your Company'}
+                  {tenant?.companyName || "Your Company"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {tenant?.workspaceUrl}
@@ -419,7 +440,7 @@ function BrandTab() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function TeamTab() {
@@ -431,11 +452,11 @@ function TeamTab() {
     removeTeamMember,
     addRole,
     updateRole,
-  } = useAppStore()
+  } = useAppStore();
 
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
-  const [roleDialogOpen, setRoleDialogOpen] = useState(false)
-  const [editingRole, setEditingRole] = useState<Role | null>(null)
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
 
   return (
     <div className="space-y-6">
@@ -444,7 +465,9 @@ function TeamTab() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg">Staff Directory</CardTitle>
-              <CardDescription>Manage team members and their roles</CardDescription>
+              <CardDescription>
+                Manage team members and their roles
+              </CardDescription>
             </div>
             <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
               <DialogTrigger asChild>
@@ -456,8 +479,8 @@ function TeamTab() {
               <InviteMemberDialog
                 roles={roles}
                 onSave={(member) => {
-                  addTeamMember(member)
-                  setInviteDialogOpen(false)
+                  addTeamMember(member);
+                  setInviteDialogOpen(false);
                 }}
               />
             </Dialog>
@@ -472,19 +495,22 @@ function TeamTab() {
               >
                 <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-medium">
                   {member.name
-                    .split(' ')
+                    .split(" ")
                     .map((n) => n[0])
-                    .join('')}
+                    .join("")}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-foreground">{member.name}</p>
                     <span
                       className={cn(
-                        'text-xs px-2 py-0.5 rounded-full',
-                        member.status === 'active' && 'bg-green-100 text-green-700',
-                        member.status === 'invited' && 'bg-amber-100 text-amber-700',
-                        member.status === 'inactive' && 'bg-gray-100 text-gray-700'
+                        "text-xs px-2 py-0.5 rounded-full",
+                        member.status === "active" &&
+                          "bg-green-100 text-green-700",
+                        member.status === "invited" &&
+                          "bg-amber-100 text-amber-700",
+                        member.status === "inactive" &&
+                          "bg-gray-100 text-gray-700",
                       )}
                     >
                       {member.status}
@@ -541,9 +567,9 @@ function TeamTab() {
                 </Button>
               </DialogTrigger>
               <RoleDialog
-                onSave={(role) => {
-                  addRole(role)
-                  setRoleDialogOpen(false)
+                onSave={(roleData) => {
+                  addRole(roleData as Role);
+                  setRoleDialogOpen(false);
                 }}
               />
             </Dialog>
@@ -559,7 +585,9 @@ function TeamTab() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h4 className="font-medium text-foreground">{role.name}</h4>
-                    <p className="text-sm text-muted-foreground">{role.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {role.description}
+                    </p>
                   </div>
                   <Button
                     variant="ghost"
@@ -574,10 +602,10 @@ function TeamTab() {
                     <span
                       key={key}
                       className={cn(
-                        'text-xs px-2 py-1 rounded',
+                        "text-xs px-2 py-1 rounded",
                         value
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500",
                       )}
                     >
                       {key}
@@ -595,43 +623,45 @@ function TeamTab() {
           <RoleDialog
             role={editingRole}
             onSave={(updates) => {
-              updateRole(editingRole.id, updates)
-              setEditingRole(null)
+              updateRole(editingRole.id, updates as Partial<Role>);
+              setEditingRole(null);
             }}
           />
         </Dialog>
       )}
     </div>
-  )
+  );
 }
 
 function InviteMemberDialog({
   roles,
   onSave,
 }: {
-  roles: Role[]
-  onSave: (member: TeamMember) => void
+  roles: Role[];
+  onSave: (member: TeamMember) => void;
 }) {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState('')
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
 
   const handleSave = () => {
-    if (!name.trim() || !email.trim() || !role) return
+    if (!name.trim() || !email.trim() || !role) return;
     onSave({
       id: Date.now().toString(),
       name,
       email,
       role,
-      status: 'invited',
-    })
-  }
+      status: "invited",
+    });
+  };
 
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>Invite Team Member</DialogTitle>
-        <DialogDescription>Send an invitation to join your team</DialogDescription>
+        <DialogDescription>
+          Send an invitation to join your team
+        </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="space-y-2">
@@ -670,23 +700,26 @@ function InviteMemberDialog({
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={handleSave} disabled={!name.trim() || !email.trim() || !role}>
+        <Button
+          onClick={handleSave}
+          disabled={!name.trim() || !email.trim() || !role}
+        >
           Send Invitation
         </Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
 }
 
 function RoleDialog({
   role,
   onSave,
 }: {
-  role?: Role
-  onSave: (role: Role | Partial<Role>) => void
+  role?: Role;
+  onSave: (role: Role | Partial<Role>) => void;
 }) {
-  const [name, setName] = useState(role?.name || '')
-  const [description, setDescription] = useState(role?.description || '')
+  const [name, setName] = useState(role?.name || "");
+  const [description, setDescription] = useState(role?.description || "");
   const [permissions, setPermissions] = useState<Record<string, boolean>>(
     role?.permissions || {
       pipeline: false,
@@ -695,38 +728,40 @@ function RoleDialog({
       vault: false,
       settings: false,
       team: false,
-    }
-  )
+    },
+  );
 
   const permissionLabels: Record<string, string> = {
-    pipeline: 'Pipeline - View dashboard and metrics',
-    workflow: 'Workflow Engine - Manage tracks and snippets',
-    people: 'People & Directory - Manage clients',
-    vault: 'The Vault - Access documents',
-    settings: 'Settings - Modify organization settings',
-    team: 'Team - Manage team members and roles',
-  }
+    pipeline: "Pipeline - View dashboard and metrics",
+    workflow: "Workflow Engine - Manage tracks and snippets",
+    people: "People & Directory - Manage clients",
+    vault: "The Vault - Access documents",
+    settings: "Settings - Modify organization settings",
+    team: "Team - Manage team members and roles",
+  };
 
   const handleSave = () => {
-    if (!name.trim()) return
+    if (!name.trim()) return;
     if (role) {
-      onSave({ name, description, permissions })
+      onSave({ name, description, permissions });
     } else {
       onSave({
         id: Date.now().toString(),
         name,
         description,
         permissions,
-      })
+      });
     }
-  }
+  };
 
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>{role ? 'Edit Role' : 'Create Role'}</DialogTitle>
+        <DialogTitle>{role ? "Edit Role" : "Create Role"}</DialogTitle>
         <DialogDescription>
-          {role ? 'Update role permissions' : 'Define a new role with specific permissions'}
+          {role
+            ? "Update role permissions"
+            : "Define a new role with specific permissions"}
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
@@ -758,7 +793,7 @@ function RoleDialog({
               <div>
                 <p className="font-medium text-sm capitalize">{key}</p>
                 <p className="text-xs text-muted-foreground">
-                  {permissionLabels[key]?.split(' - ')[1]}
+                  {permissionLabels[key]?.split(" - ")[1]}
                 </p>
               </div>
               <Switch
@@ -773,9 +808,9 @@ function RoleDialog({
       </div>
       <DialogFooter>
         <Button onClick={handleSave} disabled={!name.trim()}>
-          {role ? 'Save Changes' : 'Create Role'}
+          {role ? "Save Changes" : "Create Role"}
         </Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
 }

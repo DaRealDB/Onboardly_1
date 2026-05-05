@@ -1,13 +1,19 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useAppStore, type Client } from '@/lib/store'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Switch } from '@/components/ui/switch'
+import { useState } from "react";
+import { useAppStore, type Client } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -16,21 +22,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Plus,
   Search,
@@ -43,18 +49,16 @@ import {
   FileText,
   Eye,
   Key,
-  UserX,
   Copy,
   AlertCircle,
   Trash2,
   Check,
   X,
-  Download,
   RotateCcw,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type TabValue = 'pending' | 'hired'
+type TabValue = "pending" | "hired";
 
 export function PeopleModule() {
   const {
@@ -65,88 +69,109 @@ export function PeopleModule() {
     updateClient,
     deleteClient,
     addNotification,
-  } = useAppStore()
+  } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<TabValue>('pending')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false)
-  const [viewCredentialsDialog, setViewCredentialsDialog] = useState<Client | null>(null)
-  const [requestDocumentDialog, setRequestDocumentDialog] = useState<Client | null>(null)
-  const [viewDocumentsDialog, setViewDocumentsDialog] = useState<Client | null>(null)
+  const [activeTab, setActiveTab] = useState<TabValue>("pending");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
+  const [viewCredentialsDialog, setViewCredentialsDialog] =
+    useState<Client | null>(null);
+  const [requestDocumentDialog, setRequestDocumentDialog] =
+    useState<Client | null>(null);
+  const [viewDocumentsDialog, setViewDocumentsDialog] = useState<Client | null>(
+    null,
+  );
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
       client.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase())
+      client.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (activeTab === 'pending') {
-      return matchesSearch && (client.status === 'pending' || client.status === 'to-be-hired')
+    if (activeTab === "pending") {
+      return (
+        matchesSearch &&
+        (client.status === "pending" || client.status === "to-be-hired")
+      );
     }
-    if (activeTab === 'hired') {
-      return matchesSearch && (client.status === 'hired' || client.status === 'offboarded')
+    if (activeTab === "hired") {
+      return (
+        matchesSearch &&
+        (client.status === "hired" || client.status === "offboarded")
+      );
     }
-    return matchesSearch
-  })
+    return matchesSearch;
+  });
 
   const counts = {
-    pending: clients.filter((c) => c.status === 'pending' || c.status === 'to-be-hired').length,
-    hired: clients.filter((c) => c.status === 'hired' || c.status === 'offboarded').length,
-  }
+    pending: clients.filter(
+      (c) => c.status === "pending" || c.status === "to-be-hired",
+    ).length,
+    hired: clients.filter(
+      (c) => c.status === "hired" || c.status === "offboarded",
+    ).length,
+  };
 
   const handleFinalizeHire = (client: Client) => {
     updateClient(client.id, {
-      status: 'hired',
+      status: "hired",
       hiredAt: new Date(),
       tempCredentials: undefined,
-    })
+    });
     addNotification({
       id: Date.now().toString(),
-      title: 'Hire Finalized',
+      title: "Hire Finalized",
       message: `${client.fullName} has been successfully hired`,
-      type: 'success',
+      type: "success",
       read: false,
       createdAt: new Date(),
-    })
-  }
+    });
+  };
 
   const handleOffboard = (client: Client) => {
-    updateClient(client.id, { status: 'offboarded' })
+    updateClient(client.id, { status: "offboarded" });
     addNotification({
       id: Date.now().toString(),
-      title: 'Client Offboarded',
+      title: "Client Offboarded",
       message: `${client.fullName} has been offboarded`,
-      type: 'info',
+      type: "info",
       read: false,
       createdAt: new Date(),
-    })
-  }
+    });
+  };
 
   const handleResetPassword = (client: Client) => {
-    const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
-    const username = client.email.split('@')[0].toLowerCase()
+    const newPassword =
+      Math.random().toString(36).slice(-8) +
+      Math.random().toString(36).slice(-8);
+    const username = client.email.split("@")[0].toLowerCase();
     updateClient(client.id, {
       tempCredentials: { username, password: newPassword },
-    })
+    });
     addNotification({
       id: Date.now().toString(),
-      title: 'Password Reset',
+      title: "Password Reset",
       message: `Password has been reset for ${client.fullName}`,
-      type: 'success',
+      type: "success",
       read: false,
       createdAt: new Date(),
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">People & Directory</h1>
+          <h1 className="text-2xl font-semibold text-foreground">
+            People & Directory
+          </h1>
           <p className="text-muted-foreground mt-1">
             Manage clients through their onboarding journey
           </p>
         </div>
-        <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
+        <Dialog
+          open={addClientDialogOpen}
+          onOpenChange={setAddClientDialogOpen}
+        >
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -156,16 +181,16 @@ export function PeopleModule() {
           <AddClientDialog
             tracks={onboardingTracks}
             onSave={(client) => {
-              addClient(client)
-              setAddClientDialogOpen(false)
+              addClient(client);
+              setAddClientDialogOpen(false);
               addNotification({
                 id: Date.now().toString(),
-                title: 'New Client Added',
-                message: `${client.fullName} has been added as ${client.status === 'hired' ? 'a direct hire' : 'a new hire'}`,
-                type: 'success',
+                title: "New Client Added",
+                message: `${client.fullName} has been added as ${client.status === "hired" ? "a direct hire" : "a new hire"}`,
+                type: "success",
                 read: false,
                 createdAt: new Date(),
-              })
+              });
             }}
           />
         </Dialog>
@@ -183,7 +208,10 @@ export function PeopleModule() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as TabValue)}
+      >
         <TabsList>
           <TabsTrigger value="pending" className="gap-2">
             <Clock className="h-4 w-4" />
@@ -248,7 +276,7 @@ export function PeopleModule() {
                   <Label>Credentials</Label>
                   <div className="relative">
                     <pre className="p-4 bg-muted rounded-lg font-mono text-sm whitespace-pre-wrap break-all">
-{`Link: ${typeof window !== 'undefined' ? window.location.origin : 'https://onboardly.app'}
+                      {`Link: ${typeof window !== "undefined" ? window.location.origin : "https://onboardly.app"}
 Username: ${viewCredentialsDialog.tempCredentials.username}
 Password: ${viewCredentialsDialog.tempCredentials.password}`}
                     </pre>
@@ -258,9 +286,9 @@ Password: ${viewCredentialsDialog.tempCredentials.password}`}
                       className="absolute top-2 right-2 gap-2"
                       onClick={() =>
                         navigator.clipboard.writeText(
-`Link: ${typeof window !== 'undefined' ? window.location.origin : 'https://onboardly.app'}
+                          `Link: ${typeof window !== "undefined" ? window.location.origin : "https://onboardly.app"}
 Username: ${viewCredentialsDialog.tempCredentials!.username}
-Password: ${viewCredentialsDialog.tempCredentials!.password}`
+Password: ${viewCredentialsDialog.tempCredentials!.password}`,
                         )
                       }
                     >
@@ -313,7 +341,9 @@ Password: ${viewCredentialsDialog.tempCredentials!.password}`
                 <div className="text-center py-4 text-muted-foreground">
                   <FileText className="h-8 w-8 mx-auto mb-2" />
                   <p>No document snippets available</p>
-                  <p className="text-sm">Create snippets in the Workflow Engine</p>
+                  <p className="text-sm">
+                    Create snippets in the Workflow Engine
+                  </p>
                 </div>
               )}
             </div>
@@ -322,13 +352,13 @@ Password: ${viewCredentialsDialog.tempCredentials!.password}`
                 onClick={() => {
                   addNotification({
                     id: Date.now().toString(),
-                    title: 'Document Requested',
+                    title: "Document Requested",
                     message: `Document request sent to ${requestDocumentDialog.fullName}`,
-                    type: 'info',
+                    type: "info",
                     read: false,
                     createdAt: new Date(),
-                  })
-                  setRequestDocumentDialog(null)
+                  });
+                  setRequestDocumentDialog(null);
                 }}
                 disabled={documentSnippets.length === 0}
               >
@@ -346,7 +376,9 @@ Password: ${viewCredentialsDialog.tempCredentials!.password}`
         >
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Documents for {viewDocumentsDialog.fullName}</DialogTitle>
+              <DialogTitle>
+                Documents for {viewDocumentsDialog.fullName}
+              </DialogTitle>
               <DialogDescription>
                 Review and manage submitted documents
               </DialogDescription>
@@ -356,44 +388,60 @@ Password: ${viewCredentialsDialog.tempCredentials!.password}`
         </Dialog>
       )}
     </div>
-  )
+  );
 }
 
-function ViewDocumentsContent({ client }: { client: Client }) {
-  // Mock document data based on assigned track steps
-  const mockDocuments = [
-    {
-      id: '1',
-      stepTitle: 'Government ID',
-      attachmentName: 'passport_scan.pdf',
-      uploadedAt: new Date(Date.now() - 86400000 * 2),
-      status: 'pending' as const,
-    },
-    {
-      id: '2',
-      stepTitle: 'Proof of Address',
-      attachmentName: 'utility_bill.pdf',
-      uploadedAt: new Date(Date.now() - 86400000),
-      status: 'pending' as const,
-    },
-    {
-      id: '3',
-      stepTitle: 'Profile Photo',
-      attachmentName: 'headshot.jpg',
-      uploadedAt: new Date(),
-      status: 'pending' as const,
-    },
-  ]
+// Document Status Types
+type DocumentStatus = "pending" | "accepted" | "change-requested";
 
-  const [documents, setDocuments] = useState(mockDocuments)
+type DocumentRecord = {
+  id: string;
+  stepTitle: string;
+  attachmentName: string;
+  uploadedAt: Date;
+  status: DocumentStatus;
+};
+
+function ViewDocumentsContent({ client }: { client: Client }) {
+  const mockDocuments: DocumentRecord[] = [
+    {
+      id: "1",
+      stepTitle: "Government ID",
+      attachmentName: "passport_scan.pdf",
+      uploadedAt: new Date(Date.now() - 86400000 * 2),
+      status: "pending",
+    },
+    {
+      id: "2",
+      stepTitle: "Proof of Address",
+      attachmentName: "utility_bill.pdf",
+      uploadedAt: new Date(Date.now() - 86400000),
+      status: "pending",
+    },
+    {
+      id: "3",
+      stepTitle: "Profile Photo",
+      attachmentName: "headshot.jpg",
+      uploadedAt: new Date(),
+      status: "pending",
+    },
+  ];
+
+  const [documents, setDocuments] = useState<DocumentRecord[]>(mockDocuments);
 
   const handleAccept = (docId: string) => {
-    setDocuments(docs => docs.map(d => d.id === docId ? { ...d, status: 'accepted' as const } : d))
-  }
+    setDocuments((docs) =>
+      docs.map((d) => (d.id === docId ? { ...d, status: "accepted" } : d)),
+    );
+  };
 
   const handleRequestChange = (docId: string) => {
-    setDocuments(docs => docs.map(d => d.id === docId ? { ...d, status: 'change-requested' as const } : d))
-  }
+    setDocuments((docs) =>
+      docs.map((d) =>
+        d.id === docId ? { ...d, status: "change-requested" } : d,
+      ),
+    );
+  };
 
   if (documents.length === 0) {
     return (
@@ -401,7 +449,7 @@ function ViewDocumentsContent({ client }: { client: Client }) {
         <FileText className="h-12 w-12 mx-auto mb-4" />
         <p>No documents submitted yet</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -416,23 +464,25 @@ function ViewDocumentsContent({ client }: { client: Client }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground">{doc.stepTitle}</p>
-            <p className="text-sm text-muted-foreground truncate">{doc.attachmentName}</p>
+            <p className="text-sm text-muted-foreground truncate">
+              {doc.attachmentName}
+            </p>
             <p className="text-xs text-muted-foreground">
               Uploaded {doc.uploadedAt.toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {doc.status === 'accepted' && (
+            {doc.status === "accepted" && (
               <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
                 Accepted
               </span>
             )}
-            {doc.status === 'change-requested' && (
+            {doc.status === "change-requested" && (
               <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">
                 Change Requested
               </span>
             )}
-            {doc.status === 'pending' && (
+            {doc.status === "pending" && (
               <>
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <Eye className="h-3.5 w-3.5" />
@@ -462,7 +512,7 @@ function ViewDocumentsContent({ client }: { client: Client }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function ClientList({
@@ -478,17 +528,17 @@ function ClientList({
   onResetPassword,
   viewType,
 }: {
-  clients: Client[]
-  emptyTitle: string
-  emptyDescription: string
-  onViewCredentials: (client: Client) => void
-  onViewDocuments: (client: Client) => void
-  onRequestDocument: (client: Client) => void
-  onFinalizeHire?: (client: Client) => void
-  onOffboard?: (client: Client) => void
-  onDeleteClient?: (id: string) => void
-  onResetPassword?: (client: Client) => void
-  viewType: 'pending' | 'hired'
+  clients: Client[];
+  emptyTitle: string;
+  emptyDescription: string;
+  onViewCredentials: (client: Client) => void;
+  onViewDocuments: (client: Client) => void;
+  onRequestDocument: (client: Client) => void;
+  onFinalizeHire?: (client: Client) => void;
+  onOffboard?: (client: Client) => void;
+  onDeleteClient?: (id: string) => void;
+  onResetPassword?: (client: Client) => void;
+  viewType: "pending" | "hired";
 }) {
   if (clients.length === 0) {
     return (
@@ -496,10 +546,12 @@ function ClientList({
         <CardContent className="py-12 text-center">
           <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="font-medium text-foreground">{emptyTitle}</h3>
-          <p className="text-sm text-muted-foreground mt-1">{emptyDescription}</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {emptyDescription}
+          </p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -510,23 +562,29 @@ function ClientList({
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-medium text-lg">
                 {client.fullName
-                  .split(' ')
+                  .split(" ")
                   .map((n) => n[0])
-                  .join('')}
+                  .join("")}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-foreground">{client.fullName}</h3>
+                  <h3 className="font-medium text-foreground">
+                    {client.fullName}
+                  </h3>
                   <span
                     className={cn(
-                      'text-xs px-2 py-0.5 rounded-full font-medium',
-                      client.status === 'hired' && 'bg-green-100 text-green-700',
-                      client.status === 'pending' && 'bg-amber-100 text-amber-700',
-                      client.status === 'to-be-hired' && 'bg-blue-100 text-blue-700',
-                      client.status === 'offboarded' && 'bg-gray-100 text-gray-700'
+                      "text-xs px-2 py-0.5 rounded-full font-medium",
+                      client.status === "hired" &&
+                        "bg-green-100 text-green-700",
+                      client.status === "pending" &&
+                        "bg-amber-100 text-amber-700",
+                      client.status === "to-be-hired" &&
+                        "bg-blue-100 text-blue-700",
+                      client.status === "offboarded" &&
+                        "bg-gray-100 text-gray-700",
                     )}
                   >
-                    {client.status.replace('-', ' ')}
+                    {client.status.replace("-", " ")}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -543,15 +601,17 @@ function ClientList({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {onFinalizeHire && (client.status === 'pending' || client.status === 'to-be-hired') && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => onFinalizeHire(client)}
-                  >
-                    Finalize Hire
-                  </Button>
-                )}
+                {onFinalizeHire &&
+                  (client.status === "pending" ||
+                    client.status === "to-be-hired") && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => onFinalizeHire(client)}
+                    >
+                      Finalize Hire
+                    </Button>
+                  )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -559,13 +619,17 @@ function ClientList({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {viewType === 'pending' && (
+                    {viewType === "pending" && (
                       <>
-                        <DropdownMenuItem onClick={() => onViewCredentials(client)}>
+                        <DropdownMenuItem
+                          onClick={() => onViewCredentials(client)}
+                        >
                           <Key className="h-4 w-4 mr-2" />
                           View Credentials
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onViewDocuments(client)}>
+                        <DropdownMenuItem
+                          onClick={() => onViewDocuments(client)}
+                        >
                           <Eye className="h-4 w-4 mr-2" />
                           View Documents
                         </DropdownMenuItem>
@@ -581,22 +645,30 @@ function ClientList({
                         )}
                       </>
                     )}
-                    {viewType === 'hired' && (
+                    {viewType === "hired" && (
                       <>
-                        <DropdownMenuItem onClick={() => onViewCredentials(client)}>
+                        <DropdownMenuItem
+                          onClick={() => onViewCredentials(client)}
+                        >
                           <Key className="h-4 w-4 mr-2" />
                           View Credentials
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onViewDocuments(client)}>
+                        <DropdownMenuItem
+                          onClick={() => onViewDocuments(client)}
+                        >
                           <Eye className="h-4 w-4 mr-2" />
                           View Documents
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onRequestDocument(client)}>
+                        <DropdownMenuItem
+                          onClick={() => onRequestDocument(client)}
+                        >
                           <FileText className="h-4 w-4 mr-2" />
                           Add Request Document
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onResetPassword?.(client)}>
+                        <DropdownMenuItem
+                          onClick={() => onResetPassword?.(client)}
+                        >
                           <RotateCcw className="h-4 w-4 mr-2" />
                           Reset Password
                         </DropdownMenuItem>
@@ -620,36 +692,37 @@ function ClientList({
         </Card>
       ))}
     </div>
-  )
+  );
 }
 
 function AddClientDialog({
   tracks,
   onSave,
 }: {
-  tracks: { id: string; name: string }[]
-  onSave: (client: Client) => void
+  tracks: { id: string; name: string }[];
+  onSave: (client: Client) => void;
 }) {
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [isDirectHire, setIsDirectHire] = useState(false)
-  const [selectedTrack, setSelectedTrack] = useState('')
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isDirectHire, setIsDirectHire] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState("");
 
   const handleSave = () => {
-    if (!fullName.trim() || !email.trim()) return
+    if (!fullName.trim() || !email.trim()) return;
 
     const generatePassword = () =>
-      Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+      Math.random().toString(36).slice(-8) +
+      Math.random().toString(36).slice(-8);
 
-    const username = email.split('@')[0].toLowerCase()
+    const username = email.split("@")[0].toLowerCase();
 
     onSave({
       id: Date.now().toString(),
       fullName,
       email,
       phone: phone || undefined,
-      status: isDirectHire ? 'hired' : 'pending',
+      status: isDirectHire ? "hired" : "pending",
       assignedTrack: isDirectHire ? undefined : selectedTrack || undefined,
       tempCredentials: isDirectHire
         ? undefined
@@ -657,8 +730,8 @@ function AddClientDialog({
       documents: [],
       createdAt: new Date(),
       hiredAt: isDirectHire ? new Date() : undefined,
-    })
-  }
+    });
+  };
 
   return (
     <DialogContent className="sm:max-w-md">
@@ -735,10 +808,13 @@ function AddClientDialog({
         )}
       </div>
       <DialogFooter>
-        <Button onClick={handleSave} disabled={!fullName.trim() || !email.trim()}>
-          {isDirectHire ? 'Add as Hired' : 'Add to Onboarding'}
+        <Button
+          onClick={handleSave}
+          disabled={!fullName.trim() || !email.trim()}
+        >
+          {isDirectHire ? "Add as Hired" : "Add to Onboarding"}
         </Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
 }
