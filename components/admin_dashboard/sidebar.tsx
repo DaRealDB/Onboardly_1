@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
   Activity,
   Building2,
@@ -11,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  LogOut,
+  ChevronUp,
 } from "lucide-react";
 import {
   Tooltip,
@@ -18,6 +21,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -33,6 +44,42 @@ const navItems = [
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  // State for the Admin Profile
+  const [adminName, setAdminName] = useState("Loading...");
+  const [adminEmail, setAdminEmail] = useState("");
+
+  // Fetch admin data on mount
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data } = await supabase
+          .from("super_admins")
+          .select("full_name, email")
+          .eq("id", user.id)
+          .single();
+
+        if (data) {
+          setAdminName(data.full_name || "Super Admin");
+          setAdminEmail(data.email);
+        }
+      }
+    };
+
+    fetchAdminData();
+  }, [supabase]);
+
+  // Handle Sign Out
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/auth/login"); // Redirects to login
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -54,7 +101,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-hidden">
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-x-hidden overflow-y-auto">
           <p
             className={`text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-2 transition-opacity duration-200 ${collapsed ? "opacity-0 hidden" : "opacity-100"}`}
           >
@@ -105,7 +152,61 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           })}
         </nav>
 
-        <div className="py-4" />
+        {/* User Profile Dropdown (New Section) */}
+        <div className="p-3 border-t border-sidebar-border mt-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground outline-none ${
+                  collapsed ? "justify-center" : "justify-between"
+                }`}
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 text-primary-foreground font-bold">
+                    {adminName.charAt(0).toUpperCase()}
+                  </div>
+                  {!collapsed && (
+                    <div className="flex flex-col items-start overflow-hidden">
+                      <span className="truncate w-[120px] text-sidebar-foreground font-semibold text-left">
+                        {adminName}
+                      </span>
+                      <span className="truncate w-[120px] text-xs text-muted-foreground text-left">
+                        {adminEmail}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {!collapsed && (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              side={collapsed ? "right" : "top"}
+              align={collapsed ? "end" : "center"}
+              sideOffset={12}
+              className="w-56"
+            >
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <span className="font-medium">{adminName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {adminEmail}
+                  </span>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="text-destructive cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Collapse toggle */}
         <button
