@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation"; // Added for hard redirect
-import { createClient } from "@/lib/supabase/client"; // Added for DB access
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +78,6 @@ export function LogicStep() {
   };
 
   const handleBack = () => {
-    // This assumes your WizardLayout listens to this view to show Step 2
     const { setCurrentView } = useAppStore.getState();
     setCurrentView("wizard-theme");
   };
@@ -93,43 +92,27 @@ export function LogicStep() {
       } = await supabase.auth.getSession();
       if (!session) throw new Error("No session found");
 
-      // 2. Create the Tenant using your specific schema columns
-      const { data: newTenant, error: tenantError } = await supabase
-        .from("tenants")
+      // 2. Create the Company using the NEW schema
+      const { data: newCompany, error: companyError } = await supabase
+        .from("companies") // FIXED: 'tenants' -> 'companies'
         .insert({
-          owner_id: session.user.id, // Required by your schema
-          name: tenant?.companyName || trackName, // Maps to company name
-          slug: tenant?.workspaceUrl || `org-${Date.now()}`, // Maps to URL
-          brand_color: tenant?.primaryColor || "#3B82F6", // Maps to brand color
-          default_logic_mode: mode, // Sets your chosen 'strict' or 'parallel' mode
+          owner_id: session.user.id,
+          name: tenant?.companyName || trackName,
+          slug: tenant?.workspaceUrl || `org-${Date.now()}`,
+          brand_color: tenant?.primaryColor || "#3B82F6",
+          // REMOVED: default_logic_mode (since we dropped this column)
         })
         .select()
         .single();
 
-      if (tenantError) throw tenantError;
+      if (companyError) throw companyError;
 
-      // NOTE: Your database trigger 'on_tenant_created_add_owner'
-      // automatically handles adding you to team_members. No extra code needed here!
-
-      // 3. Save the Workflow Template using the new tenant ID
-      const { error: trackError } = await supabase
-        .from("workflow_templates")
-        .insert({
-          tenant_id: newTenant.id,
-          name: trackName,
-          mode: mode,
-        });
-
-      if (trackError) {
-        console.warn(
-          "Tenant created, but template failed:",
-          trackError.message,
-        );
-      }
+      // REMOVED: workflow_templates insert code because we dropped that table!
+      // Once you rebuild the workflow feature, you can add it back here.
 
       toast.success("Workspace launched successfully!");
 
-      // 4. Hard Redirect to Dashboard
+      // 3. Hard Redirect to Dashboard
       router.push("/dashboard");
       router.refresh();
     } catch (err: any) {
