@@ -24,9 +24,7 @@ interface AuthContextType {
     password: string,
     metadata?: Record<string, unknown>,
   ) => Promise<{ error: string | null }>;
-  resendConfirmationEmail: (
-    email: string,
-  ) => Promise<{ error: string | null }>;
+  resendConfirmationEmail: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isSuperAdmin: boolean;
 }
@@ -41,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
 
+  // Admin Check
   const checkSuperAdmin = useCallback(
     async (userId: string) => {
       const { data } = await supabase
@@ -54,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [supabase],
   );
 
+  // Session Management
   useEffect(() => {
     const getSession = async () => {
       const {
@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase, checkSuperAdmin]);
 
+  // Auth Methods
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -100,24 +101,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user) {
-      // Check if email is verified
       if (!data.user.email_confirmed_at) {
-        // Email not verified, redirect to signup-success page
-        return { error: "Please verify your email before signing in. Check your inbox for the confirmation email." };
+        return {
+          error:
+            "Please verify your email before signing in. Check your inbox for the confirmation email.",
+        };
       }
 
-      // Check if user has any tenants (via team_members)
       const { data: teamMemberships } = await supabase
         .from("team_members")
-        .select("tenant_id")
+        .select("company_id")
         .eq("user_id", data.user.id)
         .limit(1);
 
       if (!teamMemberships || teamMemberships.length === 0) {
-        // No tenants, redirect to onboarding
         router.push("/onboarding");
       } else {
-        // Has tenants, go to dashboard
         router.push("/dashboard");
       }
     } else {
@@ -153,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resendConfirmationEmail = async (email: string) => {
     const { error } = await supabase.auth.resend({
-      type: 'signup',
+      type: "signup",
       email,
       options: {
         emailRedirectTo:
