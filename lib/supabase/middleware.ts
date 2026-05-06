@@ -27,10 +27,6 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -60,96 +56,83 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith(path)
   )
 
-  // Admin routes require super admin check
   const isAdminPath = pathname.startsWith('/admin')
-
-  // If not authenticated and trying to access protected route
-  if (isProtectedPath && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    url.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(url)
-  }
-
-  // Admin routes require additional super_admin check
-  if (isAdminPath && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    url.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(url)
-  }
-
-  if (isAdminPath && user) {
-  const { data: superAdmin } = await supabase
-    .from('super_admins')
-    .select('id')
-    .eq('id', user.id)
-    .single()
-
-  if (!superAdmin) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-}
-
-  // Redirect logged in users away from auth pages to dashboard
   const authPaths = ['/auth/login', '/auth/signup']
   const isAuthPath = authPaths.some(path => pathname === path)
 
-  if (isAuthPath && user) {
-    // Check if user has any tenants
-    const { data: memberships } = await supabase
-      .from('team_members')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1)
-
+  // 1. If not authenticated and trying to access protected route -> kick to login
+  if ((isProtectedPath || isAdminPath) && !user) {
     const url = request.nextUrl.clone()
-    
-    if (!memberships || memberships.length === 0) {
-      // No tenants, redirect to onboarding
-      url.pathname = '/onboarding'
-    } else {
-      // Has tenants, redirect to dashboard
-      url.pathname = '/dashboard'
-    }
-    
+    url.pathname = '/auth/login'
+    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
-  // Onboarding check - if user has tenants, redirect to dashboard
-  if (pathname === '/onboarding' && user) {
-    const { data: memberships } = await supabase
-      .from('team_members')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1)
+  // 2. If authenticated, determine role and route accordingly
+  if (user) {
+    // Check if user is a Super Admin FIRST
+    const { data: superAdmin } = await supabase
+      .from('super_admins')
+      .select('id')
+      .eq('id', user.id)
+      .single()
 
-    if (memberships && memberships.length > 0) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
+    const isSuperAdmin = !!superAdmin
+
+    // --- SUPER ADMIN LOGIC ---
+    if (isSuperAdmin) {
+      // If Super Admin tries to visit login, signup, dashboard, or onboarding -> force them to Admin panel
+      if (isAuthPath || pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin'
+        return NextResponse.redirect(url)
+      }
+      return supabaseResponse // Let them proceed to /admin normally
     }
-  }
 
-  // Dashboard check - if user has no tenants, redirect to onboarding
-  // Skip this check if coming from onboarding (to allow the just-created tenant to load)
-  const referer = request.headers.get('referer')
-  const isFromOnboarding = referer?.includes('/onboarding')
-  
-  if (pathname.startsWith('/dashboard') && user && !isFromOnboarding) {
-    const { data: memberships, error } = await supabase
-      .from('team_members')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1)
+    // --- STANDARD TENANT LOGIC ---
+    // --- STANDARD TENANT LOGIC ---
+    if (!isSuperAdmin) {
+      // Prevent standard users from accessing Admin routes
+      if (isAdminPath) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
 
-    // Only redirect if we're sure there are no memberships (not on error)
-    if (!error && (!memberships || memberships.length === 0)) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/onboarding'
-      return NextResponse.redirect(url)
+      // Check if tenant has a workspace
+      // FIXED: Changed 'tenant_id' to 'company_id' to match your schema
+      const { data: memberships, error } = await supabase
+        .from('team_members')
+        .select('company_id') 
+        .eq('user_id', user.id)
+        .limit(1)
+
+      const hasWorkspace = !error && memberships && memberships.length > 0
+
+      // If hitting login/signup pages, push them to their proper home
+      if (isAuthPath) {
+        const url = request.nextUrl.clone()
+        url.pathname = hasWorkspace ? '/dashboard' : '/onboarding'
+        return NextResponse.redirect(url)
+      }
+
+      // If they have a workspace but try to go to onboarding -> force to dashboard
+      if (pathname === '/onboarding' && hasWorkspace) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+
+      // If they hit dashboard but have no workspace -> force to onboarding
+      const referer = request.headers.get('referer')
+      const isFromOnboarding = referer?.includes('/onboarding')
+      
+      if (pathname.startsWith('/dashboard') && !hasWorkspace && !isFromOnboarding) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
+      }
     }
   }
 

@@ -1,5 +1,4 @@
-// Static data for landing page components
-
+// Data Exports
 export const LOGOS = [
   "Apex Legal Group",
   "Summit Financial",
@@ -15,21 +14,21 @@ export const HOW_IT_WORKS = [
     icon: "Palette",
     title: "Brand Your Portal",
     description:
-      "Upload your logo, set brand colors, and create a portal that feels like it was built by your firm — not a SaaS vendor. Live preview before going live.",
+      "Upload your logo, set brand colors, and create a portal that feels like it was built by your company — not a SaaS vendor. Live preview before going live.",
   },
   {
     step: "02",
     icon: "GitBranch",
     title: "Build the Workflow",
     description:
-      "Use the Policy Engine to design your sequence. Enforce strict order or allow flexible parallel completion — your call, your clients.",
+      "Use the Policy Engine to design your sequence. Enforce strict order or allow flexible parallel completion — your call, your new hires.",
   },
   {
     step: "03",
     icon: "Send",
     title: "Invite & Track Live",
     description:
-      "Send a secure branded link and watch real-time progress on your dashboard. Automated reminders chase down stuck clients so you don't have to.",
+      "Send a secure branded link and watch real-time progress on your dashboard. Automated reminders chase down stuck new hires so you don't have to.",
   },
 ];
 
@@ -37,12 +36,12 @@ export const SECONDARY_FEATURES = [
   {
     icon: "GitBranch",
     title: "Policy Engine",
-    desc: "Strict Mode or Parallel Mode. Control exactly how clients progress through onboarding.",
+    desc: "Strict Mode or Parallel Mode. Control exactly how new hires progress through onboarding.",
   },
   {
     icon: "Bell",
     title: "Automated Reminders",
-    desc: "Smart scheduling nudges stuck clients. No more chasing.",
+    desc: "Smart scheduling nudges stuck new hires. No more chasing.",
   },
   {
     icon: "Globe",
@@ -52,15 +51,14 @@ export const SECONDARY_FEATURES = [
   {
     icon: "BarChart3",
     title: "Real-Time Analytics",
-    desc: "Live pipeline dashboard. Know exactly where every client stands at all times.",
+    desc: "Live pipeline dashboard. Know exactly where every new hire stands at all times.",
   },
 ];
 
-
 export const FAQS = [
   {
-    q: 'What counts as an "active client"?',
-    a: "A client with an open onboarding portal. Once they complete onboarding, they no longer count toward your limit.",
+    q: 'What counts as an "active new hire"?',
+    a: "A new hire with an open onboarding portal. Once they complete onboarding, they no longer count toward your limit.",
   },
   {
     q: "Is there a setup fee?",
