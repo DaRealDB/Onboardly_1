@@ -5,6 +5,7 @@ import { HOW_IT_WORKS, SECONDARY_FEATURES } from "./data";
 import { Shield, Palette } from "lucide-react";
 import * as Icons from "lucide-react";
 
+// Animations
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
@@ -20,6 +21,7 @@ const fadeRight: Variants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
 };
 
+// Main Component
 export default function Features() {
   return (
     <>
@@ -37,13 +39,16 @@ export default function Features() {
               Set Up in Under 10 Minutes
             </h2>
             <p className="mt-4 text-[#475569] max-w-xl mx-auto">
-              No technical expertise required. Professional results from day one.
+              No technical expertise required. Professional results from day
+              one.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {HOW_IT_WORKS.map((step, i) => {
-              const IconComponent = Icons[step.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
+              const IconComponent = Icons[
+                step.icon as keyof typeof Icons
+              ] as React.ComponentType<{ className?: string }>;
               return (
                 <motion.div
                   key={i}
@@ -90,8 +95,8 @@ export default function Features() {
               Enterprise Features, Simple Pricing
             </h2>
             <p className="mt-4 text-[#475569] max-w-xl mx-auto">
-              Built for professional service firms who demand security,
-              flexibility, and white-glove branding.
+              Built for forward-thinking teams who demand security, flexibility,
+              and white-glove branding.
             </p>
           </motion.div>
 
@@ -137,16 +142,18 @@ export default function Features() {
                 sensitive documents. SOC 2 Type II compliant infrastructure.
               </p>
               <div className="flex flex-wrap gap-2">
-                {["AES-256 Encryption", "Role-Based Access", "SOC 2 Type II"].map(
-                  (b) => (
-                    <span
-                      key={b}
-                      className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full border border-white/10"
-                    >
-                      {b}
-                    </span>
-                  )
-                )}
+                {[
+                  "AES-256 Encryption",
+                  "Role-Based Access",
+                  "SOC 2 Type II",
+                ].map((b) => (
+                  <span
+                    key={b}
+                    className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full border border-white/10"
+                  >
+                    {b}
+                  </span>
+                ))}
               </div>
             </motion.div>
 
@@ -166,7 +173,7 @@ export default function Features() {
               </h3>
               <p className="text-[#475569] text-sm leading-relaxed mb-5">
                 Your brand, your rules. Upload logos, set colors, and customize
-                every element. Clients never see our name — just yours.
+                every element. New hires never see our name — just yours.
               </p>
               <div className="flex gap-2">
                 <div className="w-8 h-8 bg-[#2563EB] rounded-lg" />
@@ -177,7 +184,9 @@ export default function Features() {
 
             {/* 4 smaller tiles */}
             {SECONDARY_FEATURES.map((feature, i) => {
-              const IconComponent = Icons[feature.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
+              const IconComponent = Icons[
+                feature.icon as keyof typeof Icons
+              ] as React.ComponentType<{ className?: string }>;
               return (
                 <motion.div
                   key={i}

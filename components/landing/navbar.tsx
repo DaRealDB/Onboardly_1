@@ -12,6 +12,12 @@ interface NavbarProps {
 export default function Navbar({ navHidden }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Hard refresh handler
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.location.href = "/";
+  };
+
   return (
     <motion.header
       variants={{ visible: { y: 0 }, hidden: { y: "-100%" } }}
@@ -22,7 +28,11 @@ export default function Navbar({ navHidden }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link
+            href="/"
+            onClick={handleLogoClick}
+            className="flex items-center gap-2"
+          >
             <div className="w-7 h-7 bg-[#2563EB] rounded-md flex items-center justify-center">
               <span className="font-sora text-white text-xs font-bold">O</span>
             </div>
@@ -34,9 +44,9 @@ export default function Navbar({ navHidden }: NavbarProps) {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
             {[
-              ["Features", "#features"],
-              ["How It Works", "#how-it-works"],
               ["Case Studies", "#case-studies"],
+              ["How It Works", "#how-it-works"],
+              ["Features", "#features"],
             ].map(([label, href]) => (
               <a
                 key={label}
@@ -60,7 +70,7 @@ export default function Navbar({ navHidden }: NavbarProps) {
               href="/auth/signup"
               className="bg-[#2563EB] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#1D4ED8] transition-colors"
             >
-              Start Free Trial
+              Start Here
             </Link>
           </div>
 
@@ -83,9 +93,9 @@ export default function Navbar({ navHidden }: NavbarProps) {
           <div className="md:hidden py-4 border-t border-slate-100">
             <nav className="flex flex-col gap-4">
               {[
-                ["Features", "#features"],
-                ["How It Works", "#how-it-works"],
                 ["Case Studies", "#case-studies"],
+                ["How It Works", "#how-it-works"],
+                ["Features", "#features"],
               ].map(([label, href]) => (
                 <a
                   key={label}

@@ -5,7 +5,12 @@ import { motion, Variants } from "framer-motion";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30, scale: 0.95 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.6, ease: "easeOut" },
+  },
 };
 
 function AnimatedCounter({
@@ -37,7 +42,7 @@ function AnimatedCounter({
           observer.disconnect();
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -73,7 +78,7 @@ export default function Metrics() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10">
           {[
             { label: "Hours Saved Per Client", end: 10, suffix: "hrs+" },
-            { label: "Client Completion Rate", end: 98, suffix: "%" },
+            { label: "Client Completion Rate", end: 93, suffix: "%" },
           ].map((m, i) => (
             <motion.div
               key={i}

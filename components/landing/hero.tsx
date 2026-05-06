@@ -11,12 +11,19 @@ const fadeUp: Variants = {
 
 const stagger: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.2 } },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15, delayChildren: 0.2 },
+  },
 };
 
 const scaleIn: Variants = {
   hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.5, ease: "easeOut" },
+  },
 };
 
 export default function Hero() {
@@ -35,7 +42,7 @@ export default function Hero() {
               variants={fadeUp}
               className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-1.5 mb-6 hover:bg-blue-100 transition-colors duration-300"
             >
-              <motion.span 
+              <motion.span
                 className="w-2 h-2 bg-[#2563EB] rounded-full"
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ repeat: Infinity, duration: 2 }}
@@ -75,35 +82,9 @@ export default function Hero() {
                   href="/auth/signup"
                   className="inline-flex items-center gap-2 bg-[#2563EB] text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-[#1D4ED8] hover:shadow-lg transition-all duration-200"
                 >
-                  Start Free Trial <ArrowRight className="w-4 h-4" />
+                  Start Now <ArrowRight className="w-4 h-4" />
                 </Link>
               </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              >
-                <Link
-                  href="/auth/signup"
-                  className="inline-flex items-center gap-2 bg-white text-[#0A1628] px-6 py-3.5 rounded-xl font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                >
-                  <Play className="w-4 h-4" /> View Demo
-                </Link>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeUp}
-              className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#64748B]"
-            >
-              {[
-                "14-day free trial",
-                "Cancel anytime",
-              ].map((t) => (
-                <span key={t} className="flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-[#16A34A]" /> {t}
-                </span>
-              ))}
             </motion.div>
           </motion.div>
 
@@ -221,9 +202,7 @@ export default function Hero() {
                       <span className="text-[#64748B]">
                         2 of 4 steps complete
                       </span>
-                      <span className="font-semibold text-[#0A1628]">
-                        50%
-                      </span>
+                      <span className="font-semibold text-[#0A1628]">50%</span>
                     </div>
                     <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                       <motion.div
@@ -266,25 +245,10 @@ export default function Hero() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ delay: 1.2, type: "spring", stiffness: 200 }}
               >
-                <p className="font-sora text-white text-xl font-bold">
-                  10hrs+
-                </p>
+                <p className="font-sora text-white text-xl font-bold">10hrs+</p>
                 <p className="text-slate-400 text-xs mt-0.5">
                   saved per client
                 </p>
-              </motion.div>
-
-              {/* Floating card — right-middle */}
-              <motion.div
-                className="absolute top-1/2 -right-10 -translate-y-1/2 bg-[#2563EB] rounded-xl shadow-xl px-4 py-3"
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.4, type: "spring", stiffness: 200 }}
-              >
-                <p className="font-sora text-white text-xl font-bold">
-                  1,200+
-                </p>
-                <p className="text-blue-100 text-xs mt-0.5">firms trust us</p>
               </motion.div>
             </div>
           </motion.div>
