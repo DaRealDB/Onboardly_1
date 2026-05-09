@@ -1,9 +1,64 @@
 "use client";
 
+// Imports
 import { motion, Variants } from "framer-motion";
-import { HOW_IT_WORKS, SECONDARY_FEATURES } from "./data";
-import { Shield, Palette } from "lucide-react";
-import * as Icons from "lucide-react";
+import {
+  Shield,
+  Palette,
+  GitMerge,
+  Send,
+  Bell,
+  Globe,
+  LineChart,
+} from "lucide-react";
+
+// Data
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Brand Your Workspace",
+    description:
+      "Upload your company logo and define your primary colors. The system instantly generates a dedicated subdomain with your Native Brand Feel.",
+    icon: Palette,
+  },
+  {
+    step: "02",
+    title: "Build Onboarding Tracks",
+    description:
+      "Use the Workflow Engine to create role-specific templates. Enforce sequential steps with Strict Mode or flexible checklists with Parallel Mode.",
+    icon: GitMerge,
+  },
+  {
+    step: "03",
+    title: "Invite & Track Live",
+    description:
+      "Set a candidate to 'To Be Hired' to provision their portal. Watch their progress in real-time on your Pipeline analytics dashboard.",
+    icon: Send,
+  },
+];
+
+const SECONDARY_FEATURES = [
+  {
+    title: "Workflow Engine",
+    desc: "Design macro-templates for full onboarding tracks or micro-snippets for one-off document requests.",
+    icon: GitMerge,
+  },
+  {
+    title: "Live Notifications",
+    desc: "Real-time alerts in your notification center when a candidate submits a document or finishes a track.",
+    icon: Bell,
+  },
+  {
+    title: "Custom Subdomains",
+    desc: "Dedicated workspaces (e.g., company.onboardly.com) automatically provisioned upon tenant sign-up.",
+    icon: Globe,
+  },
+  {
+    title: "Pipeline Analytics",
+    desc: "Monitor your Total Active Hires and completion rates to identify bottlenecks in the HR process.",
+    icon: LineChart,
+  },
+];
 
 // Animations
 const fadeUp: Variants = {
@@ -25,7 +80,6 @@ const fadeRight: Variants = {
 export default function Features() {
   return (
     <>
-      {/* How It Works Section */}
       <section id="how-it-works" className="bg-[#F8FAFC] py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -36,19 +90,16 @@ export default function Features() {
             variants={fadeUp}
           >
             <h2 className="font-sora text-4xl font-bold text-[#0A1628]">
-              Set Up in Under 10 Minutes
+              Automate Hiring in Under 10 Minutes
             </h2>
             <p className="mt-4 text-[#475569] max-w-xl mx-auto">
-              No technical expertise required. Professional results from day
-              one.
+              Transition candidates from pending to active employees seamlessly.
+              Professional HR results from day one.
             </p>
           </motion.div>
-
           <div className="grid md:grid-cols-3 gap-6">
             {HOW_IT_WORKS.map((step, i) => {
-              const IconComponent = Icons[
-                step.icon as keyof typeof Icons
-              ] as React.ComponentType<{ className?: string }>;
+              const IconComponent = step.icon;
               return (
                 <motion.div
                   key={i}
@@ -81,7 +132,6 @@ export default function Features() {
         </div>
       </section>
 
-      {/* Features Bento Section */}
       <section id="features" className="bg-white py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -92,21 +142,19 @@ export default function Features() {
             variants={fadeUp}
           >
             <h2 className="font-sora text-4xl font-bold text-[#0A1628]">
-              Enterprise Features, Simple Pricing
+              Enterprise HR Features, Simple Setup
             </h2>
             <p className="mt-4 text-[#475569] max-w-xl mx-auto">
-              Built for forward-thinking teams who demand security, flexibility,
-              and white-glove branding.
+              Built for back-office teams who demand compliance, flexibility,
+              and a premium front-facing experience for candidates.
             </p>
           </motion.div>
-
-          {/* Stats strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
-              { label: "E-Signature", value: "Built-in" },
-              { label: "File Size Limit", value: "5GB / file" },
-              { label: "Reminders", value: "Automated" },
-              { label: "Audit Logs", value: "Full history" },
+              { label: "Digital Signatures", value: "Verified" },
+              { label: "Data Architecture", value: "Multi-Tenant" },
+              { label: "Candidate Status", value: "Real-Time Tracking" },
+              { label: "Access Control", value: "Role-Based" },
             ].map((stat, i) => (
               <div
                 key={i}
@@ -120,9 +168,7 @@ export default function Features() {
             ))}
           </div>
 
-          {/* Bento grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Large dark tile */}
             <motion.div
               className="md:col-span-2 bg-[#0A1628] rounded-2xl p-8"
               initial="hidden"
@@ -134,18 +180,19 @@ export default function Features() {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-sora text-2xl font-bold text-white mb-3">
-                Secure Document Vault
+                Global Document Vault
               </h3>
               <p className="text-slate-300 text-sm leading-relaxed mb-6 max-w-md">
-                Industry-standard AES-256 encryption protects every file.
-                Role-based access controls ensure only authorized users see
-                sensitive documents. SOC 2 Type II compliant infrastructure.
+                A centralized repository for reviewing all uploaded company
+                documentation. Sort by pending or verified statuses, download
+                raw files, and manage historical employee records with
+                enterprise-grade security.
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  "AES-256 Encryption",
+                  "Verified Signatures",
                   "Role-Based Access",
-                  "SOC 2 Type II",
+                  "Encrypted PDFs",
                 ].map((b) => (
                   <span
                     key={b}
@@ -157,7 +204,6 @@ export default function Features() {
               </div>
             </motion.div>
 
-            {/* White-label tile */}
             <motion.div
               className="bg-[#F8FAFC] rounded-2xl p-8 border border-slate-200 hover:border-[#2563EB] hover:shadow-lg transition-all duration-300"
               initial="hidden"
@@ -169,11 +215,12 @@ export default function Features() {
                 <Palette className="w-6 h-6 text-[#2563EB]" />
               </div>
               <h3 className="font-sora text-lg font-bold text-[#0A1628] mb-2">
-                Dynamic White-Labeling
+                CSS Variable Engine
               </h3>
               <p className="text-[#475569] text-sm leading-relaxed mb-5">
-                Your brand, your rules. Upload logos, set colors, and customize
-                every element. New hires never see our name — just yours.
+                Maintain visual isolation. Candidates engage with your custom
+                primary colors and logos, ensuring a premium, fully
+                white-labeled experience.
               </p>
               <div className="flex gap-2">
                 <div className="w-8 h-8 bg-[#2563EB] rounded-lg" />
@@ -182,11 +229,8 @@ export default function Features() {
               </div>
             </motion.div>
 
-            {/* 4 smaller tiles */}
             {SECONDARY_FEATURES.map((feature, i) => {
-              const IconComponent = Icons[
-                feature.icon as keyof typeof Icons
-              ] as React.ComponentType<{ className?: string }>;
+              const IconComponent = feature.icon;
               return (
                 <motion.div
                   key={i}

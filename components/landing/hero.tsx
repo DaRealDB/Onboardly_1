@@ -48,7 +48,7 @@ export default function Hero() {
                 transition={{ repeat: Infinity, duration: 2 }}
               />
               <span className="text-[#2563EB] text-sm font-medium">
-                Enterprise Client Onboarding Platform
+                Enterprise Hiring Onboarding Platform
               </span>
             </motion.div>
 
@@ -56,17 +56,17 @@ export default function Hero() {
               variants={fadeUp}
               className="font-sora text-5xl md:text-6xl font-extrabold text-[#0A1628] leading-[1.1] tracking-tight"
             >
-              Stop Losing Clients in the{" "}
-              <span className="text-[#2563EB]">Onboarding Black Hole</span>
+              Stop tracking paperwork.{" "}
+              <span className="text-[#2563EB]">Start building your team.</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="mt-6 text-lg text-[#475569] leading-relaxed max-w-lg"
             >
-              Give professional clients a secure, white-labeled portal to sign
-              contracts, upload documents, and complete onboarding — so you
-              reclaim billable hours and start projects faster.
+              Streamline your entire hiring pipeline. Automate compliance
+              tracking, instantly verify documents, and guide candidates
+              seamlessly from 'to-be-hired' straight into your active roster.
             </motion.p>
 
             <motion.div
@@ -131,7 +131,7 @@ export default function Hero() {
                   <div className="space-y-3">
                     {[
                       {
-                        label: "Sign Engagement Letter",
+                        label: "Sign Employment Contract",
                         status: "Completed",
                         done: true,
                         active: false,
@@ -147,7 +147,7 @@ export default function Hero() {
                         num: "2",
                       },
                       {
-                        label: "Pay Retainer",
+                        label: "Set Up Direct Deposit",
                         status: "Locked 🔒",
                         done: false,
                         active: false,
@@ -155,7 +155,7 @@ export default function Hero() {
                         num: "3",
                       },
                       {
-                        label: "Schedule Consultation",
+                        label: "Select Benefits Package",
                         status: "Locked 🔒",
                         done: false,
                         active: false,

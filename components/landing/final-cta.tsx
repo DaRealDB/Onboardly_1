@@ -41,9 +41,8 @@ export default function FinalCTA() {
           variants={fadeUp}
           className="mt-6 text-lg text-slate-300 max-w-2xl mx-auto"
         >
-          Join 1,200+ professional service firms who&apos;ve reclaimed their
-          time, impressed their clients, and protected their margins with
-          Onboardly.
+          Join Onboardly today to ditch the manual paperwork and give every new
+          hire a premium welcome on day one.
         </motion.p>
 
         <motion.div
@@ -51,31 +50,11 @@ export default function FinalCTA() {
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <Link
-            href="/auth/signup"
+            href="/auth/login?mode=signup"
             className="inline-flex items-center gap-2 bg-[#2563EB] text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-[#3B82F6] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
           >
-            Start Your Free 14-Day Trial <ArrowRight className="w-5 h-5" />
+            Join Now! <ArrowRight className="w-5 h-5" />
           </Link>
-          <Link
-            href="/auth/signup"
-            className="border border-white/20 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors"
-          >
-            View Demo
-          </Link>
-        </motion.div>
-
-        <motion.div
-          variants={fadeUp}
-          className="mt-8 flex flex-wrap items-center justify-center gap-8 text-slate-400 text-sm"
-        >
-          {[
-            "Setup in under 10 minutes",
-            "Cancel anytime, no questions asked",
-          ].map((t) => (
-            <span key={t} className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-400" /> {t}
-            </span>
-          ))}
         </motion.div>
       </motion.div>
     </section>

@@ -3,7 +3,6 @@ export default function Footer() {
     <footer className="bg-[#050D1A] py-16 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-4 gap-8 mb-12">
-          {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 bg-[#2563EB] rounded-md flex items-center justify-center">
@@ -20,7 +19,7 @@ export default function Footer() {
             </p>
             <div className="mt-4 flex gap-3">
               <a
-                href="#"
+                href="/"
                 className="w-9 h-9 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
               >
                 <svg
@@ -32,7 +31,7 @@ export default function Footer() {
                 </svg>
               </a>
               <a
-                href="#"
+                href="/"
                 className="w-9 h-9 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
               >
                 <svg
@@ -44,7 +43,7 @@ export default function Footer() {
                 </svg>
               </a>
               <a
-                href="#"
+                href="/"
                 className="w-9 h-9 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
               >
                 <svg
@@ -63,8 +62,6 @@ export default function Footer() {
               </a>
             </div>
           </div>
-
-          {/* Link columns */}
           {[
             {
               title: "Product",
@@ -99,7 +96,7 @@ export default function Footer() {
                 {col.links.map((link) => (
                   <li key={link}>
                     <a
-                      href="#"
+                      href="/"
                       className="text-slate-500 text-sm hover:text-slate-300 transition-colors"
                     >
                       {link}
@@ -120,12 +117,12 @@ export default function Footer() {
               (link) => (
                 <a
                   key={link}
-                  href="#"
+                  href="/"
                   className="hover:text-slate-400 transition-colors"
                 >
                   {link}
                 </a>
-              )
+              ),
             )}
           </div>
         </div>
