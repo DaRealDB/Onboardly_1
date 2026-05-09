@@ -77,8 +77,8 @@ export default function Metrics() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10">
           {[
-            { label: "Hours Saved Per Client", end: 10, suffix: "hrs+" },
-            { label: "Client Completion Rate", end: 93, suffix: "%" },
+            { label: "saved per hire", end: 5, suffix: "hrs+" },
+            { label: "Pre-Boarding Completion", end: 93, suffix: "%" },
           ].map((m, i) => (
             <motion.div
               key={i}

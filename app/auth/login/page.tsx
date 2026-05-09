@@ -12,34 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-// Google Icon SVG
-const GoogleIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      fill="#4285F4"
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-    />
-    <path
-      fill="#34A853"
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
-    />
-    <path
-      fill="#FBBC05"
-      d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.93l3.66-2.83z"
-    />
-    <path
-      fill="#EA4335"
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z"
-    />
-  </svg>
-);
-
 type Mode = "signin" | "signup";
 
-// Branding Panel (The blue sliding side)
+// Branding Panel
 const BrandingPanel = () => (
-  <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-primary via-primary to-[var(--primary-hover)] text-primary-foreground flex flex-col p-10 lg:p-12">
-    {/* Background Blobs */}
+  <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-primary via-primary to-[var(--primary-hover)] text-primary-foreground flex flex-col p-10 lg:p-16">
     <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
     <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
     <div
@@ -51,7 +28,6 @@ const BrandingPanel = () => (
       }}
     />
 
-    {/* Logo - Top Left */}
     <Link
       href="/"
       className="relative z-10 flex items-center gap-2 w-fit hover:opacity-80 transition-opacity cursor-pointer inline-flex"
@@ -62,12 +38,11 @@ const BrandingPanel = () => (
       <span className="text-lg font-semibold tracking-tight">Onboardly</span>
     </Link>
 
-    {/* Messaging - Vertically Centered Layout, Left-Aligned Text */}
     <div className="relative z-10 flex-1 flex flex-col justify-center space-y-6 w-full">
-      <h2 className="text-3xl lg:text-4xl font-semibold tracking-tight leading-[1.1] max-w-lg">
+      <h2 className="text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] max-w-lg">
         Automate your corporate onboarding.
       </h2>
-      <p className="text-base text-white/80 max-w-md leading-relaxed">
+      <p className="text-lg text-white/80 max-w-md leading-relaxed">
         Streamline new-hire workflows, paperwork, and training in one beautiful
         workspace — so your team can focus on what matters.
       </p>
@@ -75,7 +50,7 @@ const BrandingPanel = () => (
   </div>
 );
 
-// Form Component
+// Form
 const AuthForm = ({
   mode,
   setMode,
@@ -86,7 +61,6 @@ const AuthForm = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, signUp } = useAuth();
-  const supabase = createClient();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,24 +79,18 @@ const AuthForm = ({
     if (emailParam) {
       setFormData((prev) => ({ ...prev, email: emailParam }));
     }
-  }, [searchParams]);
+
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "signup" || modeParam === "signin") {
+      setMode(modeParam as Mode);
+    }
+  }, [searchParams, setMode]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
     }));
-  };
-
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error)
-      toast.error("Google Sign In Failed", { description: error.message });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,10 +148,10 @@ const AuthForm = ({
   };
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-card px-6 py-10 sm:px-10 lg:px-14 overflow-y-auto">
+    <div className="min-h-full w-full flex items-center justify-center px-6 py-10 sm:px-10 lg:px-14">
       <div className="w-full max-w-sm py-4">
         <div className="mb-8">
-          <h1 className="text-[26px] sm:text-[28px] font-semibold tracking-tight text-foreground">
+          <h1 className="text-[26px] sm:text-[30px] font-semibold tracking-tight text-foreground">
             {isSignup ? "Create your account" : "Welcome back"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -252,17 +220,7 @@ const AuthForm = ({
               </button>
             </div>
 
-            {/* Forgot password positioned under the input for Sign In */}
-            {!isSignup && (
-              <div className="flex justify-end pt-1">
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs font-medium text-primary hover:text-[var(--primary-hover)] transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            )}
+            {!isSignup && <div className="flex justify-end pt-1"></div>}
           </div>
 
           {isSignup && (
@@ -287,7 +245,7 @@ const AuthForm = ({
             type="submit"
             disabled={isLoading}
             className={cn(
-              "w-full h-11 font-medium text-[15px] bg-primary text-primary-foreground mt-2",
+              "w-full h-11 font-medium text-[15px] bg-primary text-primary-foreground mt-4",
               "hover:bg-[var(--primary-hover)] hover:-translate-y-px hover:shadow-lg hover:shadow-primary/25",
               "active:translate-y-0 transition-all duration-200",
             )}
@@ -302,7 +260,7 @@ const AuthForm = ({
           </Button>
         </form>
 
-        <p className="mt-7 text-center text-sm text-muted-foreground">
+        <p className="mt-8 text-center text-sm text-muted-foreground">
           {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
           <button
             type="button"
@@ -317,18 +275,18 @@ const AuthForm = ({
   );
 };
 
-// Main Page
+// Main Layout
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const isSignup = mode === "signup";
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-background px-4 py-6 lg:p-8">
+    <main className="h-screen w-full bg-background overflow-hidden flex">
       {/* Mobile Layout */}
-      <div className="lg:hidden w-full max-w-md rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden h-[600px] overflow-y-auto">
+      <div className="lg:hidden w-full h-full overflow-y-auto">
         <Suspense
           fallback={
-            <div className="p-8 flex justify-center">
+            <div className="h-full flex items-center justify-center">
               <Loader2 className="animate-spin" />
             </div>
           }
@@ -338,7 +296,7 @@ export default function LoginPage() {
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden lg:block relative w-full max-w-6xl h-[680px] rounded-3xl border border-border/60 bg-card shadow-card overflow-hidden">
+      <div className="hidden lg:block relative w-full h-full">
         {/* Sign Up Side */}
         <div
           className={cn(
@@ -350,7 +308,7 @@ export default function LoginPage() {
         >
           <Suspense
             fallback={
-              <div className="p-8 flex justify-center">
+              <div className="h-full flex items-center justify-center">
                 <Loader2 className="animate-spin" />
               </div>
             }
@@ -370,7 +328,7 @@ export default function LoginPage() {
         >
           <Suspense
             fallback={
-              <div className="p-8 flex justify-center">
+              <div className="h-full flex items-center justify-center">
                 <Loader2 className="animate-spin" />
               </div>
             }
