@@ -194,6 +194,7 @@ const AuthForm = ({
 
           <div className="space-y-1.5">
             <div className="relative">
+              <Label htmlFor={`password-${mode}`}>Password</Label>
               <Input
                 id={`password-${mode}`}
                 name="password"

@@ -11,7 +11,6 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
-  Zap,
   LogOut,
   ChevronUp,
 } from "lucide-react";
@@ -47,11 +46,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const router = useRouter();
   const supabase = createClient();
 
-  // State for the Admin Profile
   const [adminName, setAdminName] = useState("Loading...");
   const [adminEmail, setAdminEmail] = useState("");
 
-  // Fetch admin data on mount
   useEffect(() => {
     const fetchAdminData = async () => {
       const {
@@ -75,25 +72,31 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     fetchAdminData();
   }, [supabase]);
 
-  // Handle Sign Out
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/auth/login"); // Redirects to login
+    router.push("/auth/login");
   };
 
   return (
     <TooltipProvider delayDuration={0}>
       <aside
-        className={`fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out ${collapsed ? "w-[68px]" : "w-[240px]"}`}
+        className={`fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out ${
+          collapsed ? "w-[68px]" : "w-[240px]"
+        }`}
       >
-        {/* Logo */}
+        {/* Logo Section with Stylized "O" */}
         <div className="h-16 flex items-center px-4 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-              <Zap className="w-4 h-4 text-primary-foreground" />
+            {/* Stylized Logo Mark */}
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+              <span className="text-primary-foreground font-bold text-lg leading-none">
+                O
+              </span>
             </div>
             <span
-              className={`font-bold text-lg text-sidebar-foreground whitespace-nowrap transition-opacity duration-200 ${collapsed ? "opacity-0 w-0 hidden" : "opacity-100"}`}
+              className={`font-bold text-lg text-sidebar-foreground whitespace-nowrap transition-opacity duration-200 ${
+                collapsed ? "opacity-0 w-0 hidden" : "opacity-100"
+              }`}
             >
               Onboardly
             </span>
@@ -103,7 +106,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-x-hidden overflow-y-auto">
           <p
-            className={`text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-2 transition-opacity duration-200 ${collapsed ? "opacity-0 hidden" : "opacity-100"}`}
+            className={`text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-2 transition-opacity duration-200 ${
+              collapsed ? "opacity-0 hidden" : "opacity-100"
+            }`}
           >
             Platform
           </p>
@@ -122,17 +127,19 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   }`}
               >
                 <Icon
-                  className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-sidebar-primary" : ""}`}
+                  className={`w-[18px] h-[18px] flex-shrink-0 ${
+                    isActive ? "text-sidebar-primary" : ""
+                  }`}
                 />
                 <span
-                  className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? "opacity-0 w-0 hidden" : "opacity-100"}`}
+                  className={`whitespace-nowrap transition-opacity duration-200 ${
+                    collapsed ? "opacity-0 w-0 hidden" : "opacity-100"
+                  }`}
                 >
                   {item.label}
                 </span>
                 {isActive && !collapsed && (
-                  <div
-                    className={`ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary flex-shrink-0 transition-opacity duration-200`}
-                  />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary flex-shrink-0" />
                 )}
               </Link>
             );
@@ -152,7 +159,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           })}
         </nav>
 
-        {/* User Profile Dropdown (New Section) */}
+        {/* User Profile Dropdown */}
         <div className="p-3 border-t border-sidebar-border mt-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
