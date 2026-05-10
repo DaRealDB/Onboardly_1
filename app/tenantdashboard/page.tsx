@@ -1,7 +1,7 @@
-"use client";
+// Imports
+import { PipelineModule } from "@/components/dashboard/modules/pipeline-module";
 
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-
-export default function DashboardPage() {
-  return <DashboardLayout />;
+// Page
+export default function TenantDashboardPage() {
+  return <PipelineModule />;
 }

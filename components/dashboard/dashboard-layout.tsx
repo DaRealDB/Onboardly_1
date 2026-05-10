@@ -1,34 +1,14 @@
 "use client";
 
+// Imports
 import { useAppStore } from "@/lib/store";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
-import { PipelineModule } from "./modules/pipeline-module";
-import { WorkflowModule } from "./modules/workflow-module";
-import { PeopleModule } from "./modules/people-module";
-import { VaultModule } from "./modules/vault-module";
-import { SettingsModule } from "./modules/settings-module";
 import { cn } from "@/lib/utils";
 
-export function DashboardLayout() {
-  const { currentModule, sidebarCollapsed } = useAppStore();
-
-  const renderModule = () => {
-    switch (currentModule) {
-      case "pipeline":
-        return <PipelineModule />;
-      case "workflow":
-        return <WorkflowModule />;
-      case "people":
-        return <PeopleModule />;
-      case "vault":
-        return <VaultModule />;
-      case "settings":
-        return <SettingsModule />;
-      default:
-        return <PipelineModule />;
-    }
-  };
+// Layout
+export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { sidebarCollapsed } = useAppStore();
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -40,8 +20,7 @@ export function DashboardLayout() {
         )}
       >
         <TopBar />
-        {/* mt-16 pushes the content down below the fixed header */}
-        <main className="p-6 mt-16">{renderModule()}</main>
+        <main className="p-6 mt-16">{children}</main>
       </div>
     </div>
   );
