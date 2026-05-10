@@ -54,7 +54,6 @@ import {
   Copy,
   Trash2,
   Check,
-  X,
   RotateCcw,
   Loader2,
   AlertCircle,
@@ -66,6 +65,19 @@ import { cn } from "@/lib/utils";
 // Types
 type TabValue = "pending" | "hired";
 
+export type SnippetItem = {
+  id: string;
+  title: string;
+  attachmentTitle: string;
+};
+
+export type RequestedSnippet = {
+  request_id: string;
+  snippet_id: string;
+  title: string;
+  items: SnippetItem[];
+};
+
 type ClientRecord = {
   id: string;
   company_id: string;
@@ -75,7 +87,7 @@ type ClientRecord = {
   assigned_track_id: string | null;
   temp_username?: string;
   temp_password?: string;
-  requested_documents?: string[];
+  requested_documents?: (string | RequestedSnippet)[];
   created_at: string;
   hired_at?: string;
 };
@@ -105,7 +117,9 @@ export function PeopleModule() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [tracks, setTracks] = useState<{ id: string; name: string }[]>([]);
-  const [snippets, setSnippets] = useState<{ id: string; title: string }[]>([]);
+  const [snippets, setSnippets] = useState<
+    { id: string; title: string; items: SnippetItem[] }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<TabValue>("pending");
@@ -149,7 +163,7 @@ export function PeopleModule() {
             .eq("company_id", teamData.company_id),
           supabase
             .from("document_snippets")
-            .select("id, title")
+            .select("id, title, items")
             .eq("company_id", teamData.company_id),
         ]);
 
@@ -183,7 +197,7 @@ export function PeopleModule() {
     hired: clients.filter((c) => c.status === "hired").length,
   };
 
-  // Actions
+  // Handlers
   const handleResetPassword = async (client: ClientRecord) => {
     const newPassword =
       Math.random().toString(36).slice(-8) +
@@ -243,18 +257,32 @@ export function PeopleModule() {
     }
 
     const currentReqs = requestDocumentDialog.requested_documents || [];
-    if (currentReqs.includes(snippet.title)) {
+
+    const safeCurrentReqs = currentReqs.map((r) =>
+      typeof r === "string"
+        ? { snippet_id: snippets.find((s) => s.title === r)?.id || r }
+        : r,
+    ) as RequestedSnippet[];
+
+    if (safeCurrentReqs.some((r) => r.snippet_id === snippet.id)) {
       toast({
         title: "Already Requested",
         description:
-          "This document has already been requested from this client.",
+          "This document snippet has already been requested from this client.",
         variant: "destructive",
       });
       setIsRequestingDoc(false);
       return;
     }
 
-    const newReqs = [...currentReqs, snippet.title];
+    const newRequest: RequestedSnippet = {
+      request_id: Date.now().toString(),
+      snippet_id: snippet.id,
+      title: snippet.title,
+      items: snippet.items || [],
+    };
+
+    const newReqs = [...currentReqs, newRequest];
 
     const { error } = await supabase
       .from("clients")
@@ -288,7 +316,7 @@ export function PeopleModule() {
 
   const handleUpdateRequestedDocs = async (
     clientId: string,
-    newReqs: string[],
+    newReqs: (string | RequestedSnippet)[],
   ) => {
     const { error } = await supabase
       .from("clients")
@@ -309,12 +337,12 @@ export function PeopleModule() {
       }
       toast({
         title: "Request Removed",
-        description: "The document request has been canceled.",
+        description: "The document snippet request has been canceled.",
       });
     }
   };
 
-  // Render
+  // View
   if (isLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center">
@@ -473,22 +501,22 @@ Password: ${viewCredentialsDialog.temp_password}`,
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Request Document</DialogTitle>
+              <DialogTitle>Request Document Snippet</DialogTitle>
               <DialogDescription>
-                Select a document snippet to request from{" "}
+                Select a document snippet blueprint to request from{" "}
                 {requestDocumentDialog.full_name}.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {snippets.length > 0 ? (
                 <div className="space-y-2">
-                  <Label>Select Document Type</Label>
+                  <Label>Select Snippet Profile</Label>
                   <Select
                     value={selectedSnippetId}
                     onValueChange={setSelectedSnippetId}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose a document..." />
+                      <SelectValue placeholder="Choose a snippet..." />
                     </SelectTrigger>
                     <SelectContent>
                       {snippets.map((snippet) => (
@@ -498,6 +526,15 @@ Password: ${viewCredentialsDialog.temp_password}`,
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedSnippetId && (
+                    <div className="text-xs text-muted-foreground mt-2 p-3 border rounded-md bg-muted/50">
+                      <strong>Includes:</strong>{" "}
+                      {snippets
+                        .find((s) => s.id === selectedSnippetId)
+                        ?.items.map((i) => i.title)
+                        .join(", ") || "No attachments"}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
@@ -542,6 +579,7 @@ Password: ${viewCredentialsDialog.temp_password}`,
               <ViewDocumentsContent
                 client={viewDocumentsDialog}
                 onUpdateRequestedDocs={handleUpdateRequestedDocs}
+                snippets={snippets}
               />
             </div>
           </DialogContent>
@@ -553,6 +591,7 @@ Password: ${viewCredentialsDialog.temp_password}`,
           client={finalizeHireDialog}
           onClose={() => setFinalizeHireDialog(null)}
           onSuccess={onHireSuccess}
+          snippets={snippets}
         />
       )}
     </div>
@@ -563,9 +602,14 @@ Password: ${viewCredentialsDialog.temp_password}`,
 function ViewDocumentsContent({
   client,
   onUpdateRequestedDocs,
+  snippets,
 }: {
   client: ClientRecord;
-  onUpdateRequestedDocs: (clientId: string, newReqs: string[]) => void;
+  onUpdateRequestedDocs: (
+    clientId: string,
+    newReqs: (string | RequestedSnippet)[],
+  ) => void;
+  snippets: { id: string; title: string; items: SnippetItem[] }[];
 }) {
   const supabase = createClient();
   const [steps, setSteps] = useState<WorkflowStepRecord[]>([]);
@@ -620,10 +664,11 @@ function ViewDocumentsContent({
     }
   };
 
-  const handleRemoveRequestedDoc = (title: string) => {
-    const newReqs = (client.requested_documents || []).filter(
-      (t) => t !== title,
-    );
+  const handleRemoveRequestedSnippet = (requestId: string) => {
+    const newReqs = (client.requested_documents || []).filter((req: any) => {
+      if (typeof req === "string") return req !== requestId;
+      return req.request_id !== requestId;
+    });
     onUpdateRequestedDocs(client.id, newReqs);
   };
 
@@ -635,27 +680,45 @@ function ViewDocumentsContent({
     );
   }
 
-  const requestedDocs = client.requested_documents || [];
+  const safeRequestedDocs: RequestedSnippet[] = (
+    client.requested_documents || []
+  ).map((req: any) => {
+    if (typeof req === "string") {
+      const foundSnippet = snippets.find((s) => s.title === req);
+      if (foundSnippet) {
+        return {
+          request_id: req,
+          snippet_id: foundSnippet.id,
+          title: foundSnippet.title,
+          items: foundSnippet.items || [],
+        };
+      }
+      return {
+        request_id: req,
+        snippet_id: req,
+        title: req,
+        items: [{ id: req, title: req, attachmentTitle: "" }],
+      };
+    }
+    return req;
+  });
 
   const trackDocs = steps.map((step) => ({
     title: step.title,
     doc: documents.find((d) => d.step_title === step.title),
   }));
 
-  const adHocDocs = requestedDocs.map((title) => ({
-    title,
-    doc: documents.find((d) => d.step_title === title),
-  }));
-
   const extraDocs = documents.filter(
     (d) =>
       !steps.some((s) => s.title === d.step_title) &&
-      !requestedDocs.includes(d.step_title),
+      !safeRequestedDocs.some((req) =>
+        req.items.some((i) => i.title === d.step_title),
+      ),
   );
 
   if (
     steps.length === 0 &&
-    requestedDocs.length === 0 &&
+    safeRequestedDocs.length === 0 &&
     extraDocs.length === 0
   ) {
     return (
@@ -685,23 +748,65 @@ function ViewDocumentsContent({
         </div>
       )}
 
-      {(adHocDocs.length > 0 || extraDocs.length > 0) && (
-        <div className="space-y-3">
+      {safeRequestedDocs.length > 0 &&
+        safeRequestedDocs.map((reqSnippet) => {
+          const isAllAccepted =
+            reqSnippet.items.length > 0 &&
+            reqSnippet.items.every((item) => {
+              const doc = documents.find((d) => d.step_title === item.title);
+              return doc?.status === "accepted";
+            });
+
+          return (
+            <div
+              key={reqSnippet.request_id}
+              className="space-y-3 pt-4 border-t"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                  Request: {reqSnippet.title}
+                </h3>
+                {!isAllAccepted && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() =>
+                      handleRemoveRequestedSnippet(reqSnippet.request_id)
+                    }
+                    title="Delete Request"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Request
+                  </Button>
+                )}
+              </div>
+              {reqSnippet.items.length === 0 && (
+                <p className="text-sm text-muted-foreground italic px-2">
+                  No attachments defined in this snippet.
+                </p>
+              )}
+              {reqSnippet.items.map((item, i) => {
+                const doc = documents.find((d) => d.step_title === item.title);
+                return (
+                  <DocumentRow
+                    key={`${reqSnippet.request_id}-${i}`}
+                    title={item.title}
+                    doc={doc}
+                    onAccept={handleAccept}
+                    onRequestChange={handleRequestChange}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+
+      {extraDocs.length > 0 && (
+        <div className="space-y-3 pt-4 border-t">
           <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-            Documents
+            Additional Documents
           </h3>
-          {adHocDocs.map(({ title, doc }, i) => (
-            <DocumentRow
-              key={`adhoc-${i}`}
-              title={title}
-              doc={doc}
-              onAccept={handleAccept}
-              onRequestChange={handleRequestChange}
-              onRemoveRequest={
-                !doc ? () => handleRemoveRequestedDoc(title) : undefined
-              }
-            />
-          ))}
           {extraDocs.map((doc) => (
             <DocumentRow
               key={`extra-${doc.id}`}
@@ -721,10 +826,12 @@ function FinalizeHireModal({
   client,
   onClose,
   onSuccess,
+  snippets,
 }: {
   client: ClientRecord;
   onClose: () => void;
   onSuccess: (id: string) => void;
+  snippets: { id: string; title: string; items: SnippetItem[] }[];
 }) {
   const supabase = createClient();
   const [steps, setSteps] = useState<WorkflowStepRecord[]>([]);
@@ -773,16 +880,41 @@ function FinalizeHireModal({
     return { title: step.title, isAccepted: doc?.status === "accepted" };
   });
 
-  const requestedStatus = (client.requested_documents || []).map((reqTitle) => {
-    const doc = documents.find((d) => d.step_title === reqTitle);
-    return { title: reqTitle, isAccepted: doc?.status === "accepted" };
+  const safeRequestedDocs: RequestedSnippet[] = (
+    client.requested_documents || []
+  ).map((req: any) => {
+    if (typeof req === "string") {
+      const foundSnippet = snippets.find((s) => s.title === req);
+      if (foundSnippet) {
+        return {
+          request_id: req,
+          snippet_id: foundSnippet.id,
+          title: foundSnippet.title,
+          items: foundSnippet.items || [],
+        };
+      }
+      return {
+        request_id: req,
+        snippet_id: req,
+        title: req,
+        items: [{ id: req, title: req, attachmentTitle: "" }],
+      };
+    }
+    return req;
   });
 
-  const allTrackCompleted = trackStatus.every((s) => s.isAccepted);
-  const allRequestedCompleted = requestedStatus.every((s) => s.isAccepted);
-  const allCompleted =
-    (trackStatus.length === 0 && requestedStatus.length === 0) ||
-    (allTrackCompleted && allRequestedCompleted);
+  const allTrackCompleted =
+    steps.length === 0 || trackStatus.every((s) => s.isAccepted);
+  const allRequestedCompleted =
+    safeRequestedDocs.length === 0 ||
+    safeRequestedDocs.every((req) =>
+      req.items.every((item) => {
+        const doc = documents.find((d) => d.step_title === item.title);
+        return doc?.status === "accepted";
+      }),
+    );
+
+  const allCompleted = allTrackCompleted && allRequestedCompleted;
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -802,7 +934,7 @@ function FinalizeHireModal({
           <div className="flex-1 overflow-y-auto space-y-6 my-4 pr-2">
             {trackStatus.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                   Onboarding Track
                 </h4>
                 {trackStatus.map((status, i) => (
@@ -830,37 +962,55 @@ function FinalizeHireModal({
               </div>
             )}
 
-            {requestedStatus.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Requested Documents
-                </h4>
-                {requestedStatus.map((status, i) => (
+            {safeRequestedDocs.length > 0 && (
+              <div className="space-y-4">
+                {safeRequestedDocs.map((reqSnippet) => (
                   <div
-                    key={i}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                    key={reqSnippet.request_id}
+                    className="space-y-3 pt-4 border-t first:border-0 first:pt-0"
                   >
-                    {status.isAccepted ? (
-                      <CheckSquare className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <Square className="h-5 w-5 text-muted-foreground" />
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                      Request: {reqSnippet.title}
+                    </h4>
+                    {reqSnippet.items.length === 0 && (
+                      <p className="text-sm text-muted-foreground italic">
+                        No attachments defined.
+                      </p>
                     )}
-                    <span
-                      className={cn(
-                        "font-medium",
-                        status.isAccepted
-                          ? "text-foreground"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {status.title}
-                    </span>
+                    {reqSnippet.items.map((item, i) => {
+                      const doc = documents.find(
+                        (d) => d.step_title === item.title,
+                      );
+                      const isAccepted = doc?.status === "accepted";
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                        >
+                          {isAccepted ? (
+                            <CheckSquare className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Square className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <span
+                            className={cn(
+                              "font-medium",
+                              isAccepted
+                                ? "text-foreground"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {item.title}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
             )}
 
-            {trackStatus.length === 0 && requestedStatus.length === 0 && (
+            {trackStatus.length === 0 && safeRequestedDocs.length === 0 && (
               <div className="text-center py-4 text-muted-foreground">
                 <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No requirements set for this client.</p>
@@ -901,13 +1051,11 @@ function DocumentRow({
   doc,
   onAccept,
   onRequestChange,
-  onRemoveRequest,
 }: {
   title: string;
   doc?: DocumentRecord;
   onAccept: (id: string) => void;
   onRequestChange: (id: string) => void;
-  onRemoveRequest?: () => void;
 }) {
   if (!doc) {
     return (
@@ -923,17 +1071,6 @@ function DocumentRow({
           <span className="text-xs px-2 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
             Awaiting Upload
           </span>
-          {onRemoveRequest && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              onClick={onRemoveRequest}
-              title="Cancel Request"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
         </div>
       </div>
     );
@@ -1112,7 +1249,7 @@ function ClientList({
                               onClick={() => onRequestDocument(client)}
                             >
                               <FileText className="h-4 w-4 mr-2" />
-                              Request Document
+                              Request Document Snippet
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onResetPassword(client)}

@@ -220,9 +220,12 @@ export function VaultModule() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">The Vault</h1>
+        <h1 className="text-2xl font-semibold text-foreground">
+          Secure Records
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Central repository for all submitted client documents
+          The single source of truth for all verified client files and
+          attachments.
         </p>
       </div>
 

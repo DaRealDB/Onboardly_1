@@ -1,6 +1,8 @@
 "use client";
 
+// Imports
 import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/providers/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -15,21 +17,14 @@ import {
 import { Bell, Settings, LogOut, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const moduleTitles: Record<string, string> = {
-  pipeline: "Pipeline",
-  workflow: "Workflow Engine",
-  people: "People & Directory",
-  vault: "The Vault",
-  settings: "Settings",
-};
-
+// Component
 export function TopBar() {
+  const pathname = usePathname();
+  const router = useRouter();
   const { user, signOut: authSignOut } = useAuth();
   const {
     notifications,
     markNotificationRead,
-    setCurrentModule,
-    currentModule,
     theme,
     toggleTheme,
     sidebarCollapsed,
@@ -42,10 +37,21 @@ export function TopBar() {
   const email = user?.email || "";
   const initial = fullName.charAt(0).toUpperCase();
 
+  // Handlers
   const handleSignOut = async () => {
     await authSignOut();
   };
 
+  const getPageTitle = () => {
+    if (pathname === "/tenantdashboard") return "Pipeline";
+    if (pathname.includes("/workflow")) return "Workflow Engine";
+    if (pathname.includes("/people")) return "People & Directory";
+    if (pathname.includes("/vault")) return "The Vault";
+    if (pathname.includes("/settings")) return "Settings";
+    return "Dashboard";
+  };
+
+  // Render
   return (
     <header
       className={cn(
@@ -53,14 +59,12 @@ export function TopBar() {
         sidebarCollapsed ? "left-16" : "left-64",
       )}
     >
-      {/* Dynamic Title */}
       <div>
         <h2 className="text-lg font-semibold text-foreground tracking-tight">
-          {moduleTitles[currentModule as string] || "Dashboard"}
+          {getPageTitle()}
         </h2>
       </div>
 
-      {/* Right Side Actions */}
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -75,7 +79,6 @@ export function TopBar() {
           )}
         </Button>
 
-        {/* Notifications */}
         <DropdownMenu
           open={notificationsOpen}
           onOpenChange={setNotificationsOpen}
@@ -116,7 +119,6 @@ export function TopBar() {
 
         <div className="h-6 w-px bg-border mx-1" />
 
-        {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 gap-3 px-2">
@@ -138,7 +140,9 @@ export function TopBar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setCurrentModule("settings")}>
+            <DropdownMenuItem
+              onClick={() => router.push("/tenantdashboard/settings")}
+            >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </DropdownMenuItem>

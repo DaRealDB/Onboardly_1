@@ -1,5 +1,6 @@
 "use client";
 
+// Imports
 import {
   createContext,
   useContext,
@@ -10,8 +11,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "./auth-provider";
 import type { TeamRole } from "@/lib/types/database";
-import { hasPermission, ROLE_PERMISSIONS } from "@/lib/hooks/use-team";
 
+// Types
 interface RefreshOptions {
   isNewWorkspace?: boolean;
 }
@@ -26,17 +27,18 @@ interface TenantContextType {
   impersonatedBy: string | null;
   setCurrentTenant: (tenant: any) => void;
   refreshTenants: (options?: RefreshOptions) => Promise<void>;
+  refreshTenant: () => Promise<void>; // Added for settings components
   createTenant: (
     data: any,
   ) => Promise<{ data: any | null; error: string | null }>;
   updateTenant: (id: string, data: any) => Promise<{ error: string | null }>;
-  can: (permission: string) => boolean;
   startImpersonation: (tenantId: string, adminEmail: string) => void;
   stopImpersonation: () => void;
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
+// Provider
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<any | null>(null);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -47,6 +49,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = useAuth();
   const supabase = createClient();
 
+  // Fetch logic
   const fetchTenants = useCallback(async (): Promise<any[]> => {
     if (!user) {
       setTenants([]);
@@ -57,31 +60,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoading(true);
 
-    // UPDATED: Query companies instead of tenants
     const { data: memberData, error: memberError } = await supabase
       .from("team_members")
-      .select(
-        `
-        role,
-        company:companies (*) 
-      `,
-      )
+      .select(`role, company:companies (*)`)
       .eq("user_id", user.id);
 
     if (memberError) {
-      console.error(
-        "Supabase Company Error:",
-        memberError?.message,
-        memberError?.details,
-        memberError?.hint,
-        memberError?.code,
-      );
+      console.error("Supabase Company Error:", memberError.message);
       setIsLoading(false);
       return [];
     }
 
-    // Map the new company data back into the old "tenant" format so the UI doesn't crash
-    const tenantsWithRoles: any[] = (memberData || [])
+    const tenantsWithRoles = (memberData || [])
       .filter((item: any) => item.company)
       .map((item: any) => ({
         ...item.company,
@@ -94,12 +84,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     setTenants(tenantsWithRoles);
 
+    // Set default tenant if none selected
     setTenant((prev: any) => {
       if (tenantsWithRoles.length === 0) return null;
-      if (!prev || !tenantsWithRoles.find((t) => t.id === prev.id)) {
-        return tenantsWithRoles[0];
-      }
-      return prev;
+      const found = tenantsWithRoles.find((t) => t.id === prev?.id);
+      return found || tenantsWithRoles[0];
     });
 
     setIsLoading(false);
@@ -112,139 +101,78 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // NOTE: The clients table was dropped!
-    // Returning null for now to prevent the app from crashing until you build the new feature.
+    // UPDATED: Real stats logic from the clients table
+    const { data: clientData } = await supabase
+      .from("clients")
+      .select("status, hired_at, created_at")
+      .eq("company_id", tenant.id);
+
+    if (!clientData) return;
+
+    const total = clientData.length;
+    const hired = clientData.filter((c) => c.status === "hired").length;
+    const pending = clientData.filter((c) => c.status === "pending").length;
+
     setStats({
-      totalClients: 0,
-      activeClients: 0,
-      completedClients: 0,
-      averageCompletionTime: 0,
-      completionRate: 0,
+      totalClients: total,
+      activeClients: pending,
+      completedClients: hired,
+      completionRate: total > 0 ? Math.round((hired / total) * 100) : 0,
     });
   }, [tenant, supabase]);
 
+  // Effects
   useEffect(() => {
     fetchTenants();
   }, [fetchTenants]);
-
-  // Realtime subscription for team_members changes
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel("team_members_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "team_members",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchTenants();
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "team_members",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchTenants();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, supabase, fetchTenants]);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
 
-  const setCurrentTenant = (newTenant: any) => {
-    setTenant(newTenant);
+  // Actions
+  const refreshTenants = async (options: RefreshOptions = {}) => {
+    if (options.isNewWorkspace) await new Promise((r) => setTimeout(r, 500));
+    await fetchTenants();
   };
 
-  const refreshTenants = async (options: RefreshOptions = {}) => {
-    const { isNewWorkspace = false } = options;
-
-    if (isNewWorkspace) {
-      await new Promise((res) => setTimeout(res, 500));
-    }
-
-    const result = await fetchTenants();
-
-    if (isNewWorkspace && result.length === 0) {
-      await new Promise((res) => setTimeout(res, 1000));
-      await fetchTenants();
-    }
+  const refreshTenant = async () => {
+    await fetchTenants();
+    await fetchStats();
   };
 
   const createTenant = async (data: any) => {
-    if (!user) {
-      return { data: null, error: "Not authenticated" };
-    }
-
-    // UPDATED: Insert into companies
-    const { data: newTenant, error } = await supabase
+    if (!user) return { data: null, error: "Not authenticated" };
+    const { data: newCompany, error } = await supabase
       .from("companies")
-      .insert({
-        ...data,
-        owner_id: user.id,
-      })
+      .insert({ ...data, owner_id: user.id })
       .select()
       .single();
 
-    if (error) {
-      return { data: null, error: error.message };
-    }
-
+    if (error) return { data: null, error: error.message };
     await fetchTenants();
-    return { data: newTenant, error: null };
+    return { data: newCompany, error: null };
   };
 
   const updateTenant = async (id: string, data: any) => {
-    // UPDATED: Update companies
     const { error } = await supabase
       .from("companies")
       .update(data)
       .eq("id", id);
-
-    if (error) {
-      return { error: error.message };
-    }
-
+    if (error) return { error: error.message };
     await fetchTenants();
     return { error: null };
   };
 
-  const can = useCallback(
-    (permission: string): boolean => {
-      if (isSuperAdmin) return true;
-      if (isImpersonating) return true;
-      return hasPermission(tenant?.role, permission);
-    },
-    [tenant?.role, isSuperAdmin, isImpersonating],
-  );
-
   const startImpersonation = async (tenantId: string, adminEmail: string) => {
     if (!isSuperAdmin) return;
-
-    // UPDATED: Query companies
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("companies")
       .select("*")
       .eq("id", tenantId)
       .single();
 
-    if (!error && data) {
+    if (data) {
       setTenant({ ...data, role: "owner" as TeamRole });
       setIsImpersonating(true);
       setImpersonatedBy(adminEmail);
@@ -267,11 +195,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         stats,
         isImpersonating,
         impersonatedBy,
-        setCurrentTenant,
+        setCurrentTenant: setTenant,
         refreshTenants,
+        refreshTenant,
         createTenant,
         updateTenant,
-        can,
         startImpersonation,
         stopImpersonation,
       }}
@@ -281,6 +209,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Hook
 export function useTenant() {
   const context = useContext(TenantContext);
   if (context === undefined) {

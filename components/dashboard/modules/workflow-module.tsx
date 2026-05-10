@@ -40,7 +40,6 @@ import {
   GitBranch,
   FileStack,
   Loader2,
-  Paperclip,
 } from "lucide-react";
 
 // Types
@@ -378,12 +377,27 @@ export function WorkflowModule() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                      <Paperclip className="h-4 w-4 shrink-0" />
-                      <span>
-                        {snippet.items?.length || 0} required attachment
-                        {(snippet.items?.length || 0) !== 1 ? "s" : ""}
-                      </span>
+                    <div className="space-y-2">
+                      {snippet.items?.map((item, index) => (
+                        <div
+                          key={item.id || index}
+                          className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg"
+                        >
+                          <span className="text-sm font-medium text-muted-foreground w-4">
+                            {index + 1}.
+                          </span>
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {item.title}
+                            </p>
+                            {item.attachmentTitle && (
+                              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground bg-background px-2 py-1 rounded-md border shrink-0">
+                                {item.attachmentTitle}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -392,7 +406,6 @@ export function WorkflowModule() {
           )}
         </TabsContent>
       </Tabs>
-      {/* Edit Dialogs */}
       {editingTrack && (
         <Dialog
           open={!!editingTrack}
