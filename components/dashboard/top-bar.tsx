@@ -1,10 +1,12 @@
 "use client";
 
 // Imports
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/providers/auth-provider";
+import { useTenant } from "@/lib/providers/tenant-provider";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,7 +16,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Settings, LogOut, Sun, Moon } from "lucide-react";
+import {
+  Bell,
+  Settings,
+  LogOut,
+  Sun,
+  Moon,
+  ExternalLink,
+  Briefcase,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Component
@@ -22,20 +32,66 @@ export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut: authSignOut } = useAuth();
-  const {
-    notifications,
-    markNotificationRead,
-    theme,
-    toggleTheme,
-    sidebarCollapsed,
-  } = useAppStore();
+  const { tenant } = useTenant();
+  const supabase = createClient();
+
+  const { theme, toggleTheme, sidebarCollapsed } = useAppStore();
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   const fullName =
     user?.user_metadata?.full_name || user?.user_metadata?.fullName || "User";
   const email = user?.email || "";
   const initial = fullName.charAt(0).toUpperCase();
+
+  // Fetch and Subscribe to Notifications
+  useEffect(() => {
+    if (!tenant?.id) return;
+
+    const fetchNotifications = async () => {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("company_id", tenant.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (data) setNotifications(data);
+    };
+
+    fetchNotifications();
+
+    // Listen for new notifications in real-time
+    const channel = supabase
+      .channel("realtime-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `company_id=eq.${tenant.id}`,
+        },
+        (payload) => {
+          setNotifications((prev) => [payload.new, ...prev]);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenant?.id, supabase]);
+
+  const handleMarkRead = async (id: string) => {
+    // Optimistic UI update
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
+    // Update DB
+    await supabase.from("notifications").update({ read: true }).eq("id", id);
+  };
 
   // Handlers
   const handleSignOut = async () => {
@@ -103,11 +159,23 @@ export function TopBar() {
                 notifications.map((n) => (
                   <DropdownMenuItem
                     key={n.id}
-                    onClick={() => markNotificationRead(n.id)}
+                    onClick={() => handleMarkRead(n.id)}
                     className="flex flex-col items-start p-3"
                   >
-                    <span className="font-medium text-sm">{n.title}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 w-full">
+                      <span
+                        className={cn(
+                          "font-medium text-sm",
+                          !n.read && "text-primary",
+                        )}
+                      >
+                        {n.title}
+                      </span>
+                      {!n.read && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary ml-auto" />
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-1">
                       {n.message}
                     </span>
                   </DropdownMenuItem>
@@ -130,7 +198,7 @@ export function TopBar() {
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{fullName}</span>
@@ -139,7 +207,28 @@ export function TopBar() {
                 </span>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
+            <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+              Workspaces
+            </DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => router.push("/tenantdashboard")}>
+              <Briefcase className="h-4 w-4 mr-2" />
+              Tenant Dashboard
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-muted-foreground"
+              onClick={() => {
+                // Placeholder for portal
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              View Client Portal (Preview)
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
             <DropdownMenuItem
               onClick={() => router.push("/tenantdashboard/settings")}
             >

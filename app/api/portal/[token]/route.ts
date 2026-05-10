@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
   const { token } = await params
 
   // Get client by portal token (public access)
@@ -56,7 +56,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
   const { token } = await params
   const body = await request.json()
   const { task_id, status, response_data } = body

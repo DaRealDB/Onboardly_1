@@ -388,30 +388,41 @@ function AddMemberDialog({
       c.id !== selectedClient?.id,
   );
 
-  // Function to insert into team_members
   const handleAdd = async () => {
     if (!selectedClient || !selectedRole || !companyId) return;
     setLoading(true);
 
-    const { error } = await supabase.from("team_members").insert({
-      company_id: companyId,
-      user_id: selectedClient.id,
-      role: selectedRole,
-    });
+    try {
+      const response = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: companyId,
+          email: selectedClient.email,
+          role: selectedRole,
+        }),
+      });
 
-    if (error) {
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send invite");
+      }
+
       toast({
-        title: "Database Error",
-        description: error.message.includes("foreign key")
-          ? "This client does not have a linked Auth account. Only clients with valid portal accounts can be promoted."
-          : error.message,
+        title: "Invite sent successfully!",
+        description: "The candidate will receive an email to join the staff.",
+      });
+      onSave();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({ title: "Staff member added successfully" });
-      onSave();
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -419,7 +430,7 @@ function AddMemberDialog({
       <DialogHeader>
         <DialogTitle>Add Team Member</DialogTitle>
         <DialogDescription>
-          Search for a hired candidate to add to your staff
+          Search for a hired candidate to send a staff invite
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4 py-2">
@@ -519,7 +530,7 @@ function AddMemberDialog({
           disabled={loading || !selectedClient || !selectedRole}
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Add to Staff
+          Send Invite
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -530,18 +541,16 @@ function AddMemberDialog({
 function RoleDialog({ role, companyId, onSave, close }: any) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState(role?.name || "");
-  const [description, setDescription] = useState(role?.description || "");
-  const [permissions, setPermissions] = useState<RolePermissions>(
-    role?.permissions || {
-      pipeline: false,
-      workflow: false,
-      people: false,
-      vault: false,
-      settings: false,
-      team: false,
-    },
-  );
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [permissions, setPermissions] = useState<RolePermissions>({
+    pipeline: false,
+    workflow: false,
+    people: false,
+    vault: false,
+    settings: false,
+    team: false,
+  });
 
   const permissionLabels: Record<string, string> = {
     pipeline: "Dashboard Access",
@@ -551,6 +560,34 @@ function RoleDialog({ role, companyId, onSave, close }: any) {
     settings: "Workspace Settings",
     team: "Team Management",
   };
+
+  useEffect(() => {
+    if (role) {
+      setName(role.name || "");
+      setDescription(role.description || "");
+      setPermissions(
+        role.permissions || {
+          pipeline: false,
+          workflow: false,
+          people: false,
+          vault: false,
+          settings: false,
+          team: false,
+        },
+      );
+    } else {
+      setName("");
+      setDescription("");
+      setPermissions({
+        pipeline: false,
+        workflow: false,
+        people: false,
+        vault: false,
+        settings: false,
+        team: false,
+      });
+    }
+  }, [role]);
 
   const handleSave = async () => {
     if (!name || !companyId) return;
