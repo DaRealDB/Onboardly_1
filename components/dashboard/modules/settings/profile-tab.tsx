@@ -27,12 +27,12 @@ export function ProfileTab() {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Password States
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Sync state when user loads
+  const [pwdMessage, setPwdMessage] = useState({ type: "", text: "" });
+
   useEffect(() => {
     if (user?.user_metadata?.full_name || user?.user_metadata?.fullName) {
       setFullName(user.user_metadata.full_name || user.user_metadata.fullName);
@@ -43,16 +43,16 @@ export function ProfileTab() {
   const handleSaveProfile = async () => {
     setLoading(true);
 
-    // 1. Update Auth Metadata (For Team Members)
     const { error: authError } = await supabase.auth.updateUser({
       data: { full_name: fullName },
     });
 
-    // 2. Check if user is also a client and sync name there
-    await supabase
-      .from("clients")
-      .update({ full_name: fullName })
-      .eq("email", user?.email);
+    if (user?.email) {
+      await supabase
+        .from("clients")
+        .update({ full_name: fullName })
+        .eq("email", user.email);
+    }
 
     if (authError) {
       toast({
@@ -69,20 +69,20 @@ export function ProfileTab() {
   };
 
   const handleUpdatePassword = async () => {
+    setPwdMessage({ type: "", text: "" });
+
     if (!newPassword || newPassword !== confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Passwords do not match or are empty.",
-        variant: "destructive",
+      setPwdMessage({
+        type: "error",
+        text: "Passwords do not match or are empty.",
       });
       return;
     }
 
     if (newPassword.length < 6) {
-      toast({
-        title: "Validation Error",
-        description: "Password must be at least 6 characters.",
-        variant: "destructive",
+      setPwdMessage({
+        type: "error",
+        text: "Password must be at least 6 characters.",
       });
       return;
     }
@@ -90,33 +90,27 @@ export function ProfileTab() {
     setPasswordLoading(true);
 
     try {
-      // 1. Update Supabase Auth Password (Primary)
       const { error: authError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      // 2. Sync to Clients table (If user is a client)
-      // This ensures portal login using temp_password still works
-      await supabase
-        .from("clients")
-        .update({ temp_password: newPassword })
-        .eq("email", user?.email);
-
       if (authError) throw authError;
 
-      toast({
-        title: "Success",
-        description: "Your password has been changed successfully.",
-      });
+      if (user?.email) {
+        await supabase
+          .from("clients")
+          .update({ temp_password: newPassword })
+          .eq("email", user.email);
+      }
 
+      setPwdMessage({
+        type: "success",
+        text: "Your password has been changed successfully.",
+      });
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
-      toast({
-        title: "Update Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      setPwdMessage({ type: "error", text: error.message });
     } finally {
       setPasswordLoading(false);
     }
@@ -124,7 +118,6 @@ export function ProfileTab() {
 
   return (
     <div className="space-y-6">
-      {/* Personal Info Card */}
       <Card className="border-border/50">
         <CardHeader>
           <CardTitle className="text-lg">Personal Information</CardTitle>
@@ -168,7 +161,6 @@ export function ProfileTab() {
         </CardContent>
       </Card>
 
-      {/* Direct Password Change Card */}
       <Card className="border-border/50">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -201,6 +193,15 @@ export function ProfileTab() {
               />
             </div>
           </div>
+
+          {pwdMessage.text && (
+            <p
+              className={`text-sm font-medium ${pwdMessage.type === "error" ? "text-destructive" : "text-green-600 dark:text-green-500"}`}
+            >
+              {pwdMessage.text}
+            </p>
+          )}
+
           <Button
             onClick={handleUpdatePassword}
             disabled={passwordLoading || !newPassword}

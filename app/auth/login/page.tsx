@@ -1,5 +1,6 @@
 "use client";
 
+// Imports
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -141,7 +142,7 @@ const AuthForm = ({
         setIsLoading(false);
       } else {
         toast.success("Welcome back!", { description: "Redirecting..." });
-        router.push("/dashboard");
+        router.push("/tenantdashboard");
         router.refresh();
       }
     }
@@ -276,14 +277,13 @@ const AuthForm = ({
   );
 };
 
-// Main Layout
+// Layout
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const isSignup = mode === "signup";
 
   return (
     <main className="h-screen w-full bg-background overflow-hidden flex">
-      {/* Mobile Layout */}
       <div className="lg:hidden w-full h-full overflow-y-auto">
         <Suspense
           fallback={
@@ -296,9 +296,7 @@ export default function LoginPage() {
         </Suspense>
       </div>
 
-      {/* Desktop Layout */}
       <div className="hidden lg:block relative w-full h-full">
-        {/* Sign Up Side */}
         <div
           className={cn(
             "absolute inset-y-0 left-0 w-1/2 transition-all duration-700 ease-[cubic-bezier(0.83,0,0.17,1)] overflow-y-auto",
@@ -318,7 +316,6 @@ export default function LoginPage() {
           </Suspense>
         </div>
 
-        {/* Sign In Side */}
         <div
           className={cn(
             "absolute inset-y-0 right-0 w-1/2 transition-all duration-700 ease-[cubic-bezier(0.83,0,0.17,1)] overflow-y-auto",
@@ -338,7 +335,6 @@ export default function LoginPage() {
           </Suspense>
         </div>
 
-        {/* Sliding Branding Panel */}
         <div
           className={cn(
             "absolute inset-y-0 w-1/2 transition-transform duration-700 ease-[cubic-bezier(0.83,0,0.17,1)] z-10",
