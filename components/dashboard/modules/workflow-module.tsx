@@ -1,13 +1,20 @@
-'use client'
+// Imports
+"use client";
 
-import { useState } from 'react'
-import { useAppStore, type OnboardingTrack, type OnboardingStep } from '@/lib/store'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -16,50 +23,242 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-
-import {
-  Plus,
-  Trash2,
-  GripVertical,
-  FileText,
-  Edit2,
-  MoreVertical,
-  GitBranch,
-  FileStack,
-  Paperclip,
-} from 'lucide-react'
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  Edit2,
+  MoreVertical,
+  GitBranch,
+  FileStack,
+  Loader2,
+  Paperclip,
+} from "lucide-react";
 
+// Types
+export type WorkflowStep = {
+  id?: string;
+  track_id?: string;
+  step_order: number;
+  title: string;
+  attachment_type: string;
+};
+
+export type WorkflowTrack = {
+  id: string;
+  company_id: string;
+  name: string;
+  mode: "strict" | "parallel";
+  steps: WorkflowStep[];
+};
+
+export type SnippetItem = {
+  id: string;
+  title: string;
+  attachmentTitle: string;
+};
+
+export type DocumentSnippet = {
+  id: string;
+  company_id: string;
+  title: string;
+  instructions: string | null;
+  items: SnippetItem[];
+};
+
+// Main Component
 export function WorkflowModule() {
-  const {
-    onboardingTracks,
-    documentSnippets,
-    addOnboardingTrack,
-    updateOnboardingTrack,
-    deleteOnboardingTrack,
-    addDocumentSnippet,
-  } = useAppStore()
+  const [tracks, setTracks] = useState<WorkflowTrack[]>([]);
+  const [snippets, setSnippets] = useState<DocumentSnippet[]>([]);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [newTrackDialogOpen, setNewTrackDialogOpen] = useState(false)
-  const [newSnippetDialogOpen, setNewSnippetDialogOpen] = useState(false)
-  const [editingTrack, setEditingTrack] = useState<OnboardingTrack | null>(null)
+  const [newTrackDialogOpen, setNewTrackDialogOpen] = useState(false);
+  const [newSnippetDialogOpen, setNewSnippetDialogOpen] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<WorkflowTrack | null>(null);
+  const [editingSnippet, setEditingSnippet] = useState<DocumentSnippet | null>(
+    null,
+  );
+
+  const supabase = createClient();
+
+  // Fetch functions
+  const loadData = async () => {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: teamData } = await supabase
+      .from("team_members")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!teamData) return;
+    setCompanyId(teamData.company_id);
+
+    const { data: tracksData } = await supabase
+      .from("workflow_tracks")
+      .select("*, workflow_steps(*)")
+      .eq("company_id", teamData.company_id)
+      .order("created_at", { ascending: false });
+
+    const { data: snippetsData } = await supabase
+      .from("document_snippets")
+      .select("*")
+      .eq("company_id", teamData.company_id)
+      .order("created_at", { ascending: false });
+
+    if (tracksData) {
+      const formattedTracks = tracksData.map((t) => ({
+        ...t,
+        steps: t.workflow_steps.sort(
+          (a: any, b: any) => a.step_order - b.step_order,
+        ),
+      }));
+      setTracks(formattedTracks);
+    }
+
+    if (snippetsData) {
+      setSnippets(snippetsData);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Handlers
+  const handleAddTrack = async (
+    name: string,
+    mode: "strict" | "parallel",
+    steps: WorkflowStep[],
+  ) => {
+    if (!companyId) return;
+    const { data: trackData } = await supabase
+      .from("workflow_tracks")
+      .insert({ company_id: companyId, name, mode })
+      .select()
+      .single();
+
+    if (trackData && steps.length > 0) {
+      const stepsToInsert = steps.map((s, idx) => ({
+        track_id: trackData.id,
+        step_order: idx + 1,
+        title: s.title,
+        attachment_type: s.attachment_type,
+      }));
+      await supabase.from("workflow_steps").insert(stepsToInsert);
+    }
+    setNewTrackDialogOpen(false);
+    loadData();
+  };
+
+  const handleUpdateTrack = async (
+    trackId: string,
+    name: string,
+    mode: "strict" | "parallel",
+    steps: WorkflowStep[],
+  ) => {
+    await supabase
+      .from("workflow_tracks")
+      .update({ name, mode })
+      .eq("id", trackId);
+    await supabase.from("workflow_steps").delete().eq("track_id", trackId);
+
+    if (steps.length > 0) {
+      const stepsToInsert = steps.map((s, idx) => ({
+        track_id: trackId,
+        step_order: idx + 1,
+        title: s.title,
+        attachment_type: s.attachment_type,
+      }));
+      await supabase.from("workflow_steps").insert(stepsToInsert);
+    }
+    setEditingTrack(null);
+    loadData();
+  };
+
+  const handleDeleteTrack = async (trackId: string) => {
+    await supabase.from("workflow_tracks").delete().eq("id", trackId);
+    loadData();
+  };
+
+  const handleAddSnippet = async (
+    title: string,
+    instructions: string,
+    items: SnippetItem[],
+  ) => {
+    if (!companyId) return;
+    await supabase
+      .from("document_snippets")
+      .insert({ company_id: companyId, title, instructions, items });
+    setNewSnippetDialogOpen(false);
+    loadData();
+  };
+
+  const handleUpdateSnippet = async (
+    snippetId: string,
+    title: string,
+    instructions: string,
+    items: SnippetItem[],
+  ) => {
+    await supabase
+      .from("document_snippets")
+      .update({ title, instructions, items })
+      .eq("id", snippetId);
+    setEditingSnippet(null);
+    loadData();
+  };
+
+  const handleDeleteSnippet = async (snippetId: string) => {
+    await supabase.from("document_snippets").delete().eq("id", snippetId);
+    loadData();
+  };
+
+  const handleToggleTrackMode = async (
+    trackId: string,
+    currentMode: string,
+  ) => {
+    const newMode = currentMode === "strict" ? "parallel" : "strict";
+    await supabase
+      .from("workflow_tracks")
+      .update({ mode: newMode })
+      .eq("id", trackId);
+    loadData();
+  };
+
+  // View
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Workflow Engine</h1>
-        <p className="text-muted-foreground mt-1">
-          Design onboarding tracks and manage document snippets
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          Process Automations
+        </h1>
+        <p className="text-muted-foreground text-sm max-w-2xl">
+          Configure structured onboarding tracks and reusable document
+          collection templates to streamline your workforce operations.
         </p>
       </div>
-
       <Tabs defaultValue="tracks" className="space-y-6">
         <TabsList>
           <TabsTrigger value="tracks" className="gap-2">
@@ -75,32 +274,30 @@ export function WorkflowModule() {
         <TabsContent value="tracks" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {onboardingTracks.length} track{onboardingTracks.length !== 1 && 's'} configured
+              {tracks.length} track{tracks.length !== 1 && "s"} configured
             </p>
-            <Dialog open={newTrackDialogOpen} onOpenChange={setNewTrackDialogOpen}>
+            <Dialog
+              open={newTrackDialogOpen}
+              onOpenChange={setNewTrackDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
                   New Track
                 </Button>
               </DialogTrigger>
-              <NewTrackDialog
-                onSave={(track) => {
-                  addOnboardingTrack(track)
-                  setNewTrackDialogOpen(false)
-                }}
-              />
+              <NewTrackDialog onSave={handleAddTrack} />
             </Dialog>
           </div>
 
           <div className="grid gap-4">
-            {onboardingTracks.map((track) => (
+            {tracks.map((track) => (
               <TrackCard
                 key={track.id}
                 track={track}
                 onEdit={() => setEditingTrack(track)}
-                onDelete={() => deleteOnboardingTrack(track.id)}
-                onUpdate={(updates) => updateOnboardingTrack(track.id, updates)}
+                onDelete={() => handleDeleteTrack(track.id)}
+                onToggleMode={() => handleToggleTrackMode(track.id, track.mode)}
               />
             ))}
           </div>
@@ -109,25 +306,23 @@ export function WorkflowModule() {
         <TabsContent value="snippets" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {documentSnippets.length} snippet{documentSnippets.length !== 1 && 's'} available
+              {snippets.length} snippet{snippets.length !== 1 && "s"} available
             </p>
-            <Dialog open={newSnippetDialogOpen} onOpenChange={setNewSnippetDialogOpen}>
+            <Dialog
+              open={newSnippetDialogOpen}
+              onOpenChange={setNewSnippetDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
-                  Add
+                  Add Snippet
                 </Button>
               </DialogTrigger>
-              <NewSnippetDialog
-                onSave={(snippet) => {
-                  addDocumentSnippet(snippet)
-                  setNewSnippetDialogOpen(false)
-                }}
-              />
+              <NewSnippetDialog onSave={handleAddSnippet} />
             </Dialog>
           </div>
 
-          {documentSnippets.length === 0 ? (
+          {snippets.length === 0 ? (
             <Card className="border-border/50 border-dashed">
               <CardContent className="py-12 text-center">
                 <FileStack className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -138,29 +333,43 @@ export function WorkflowModule() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {documentSnippets.map((snippet) => (
-                <Card key={snippet.id} className="border-border/50">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base">{snippet.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {snippet.description}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {snippets.map((snippet) => (
+                <Card
+                  key={snippet.id}
+                  className="border-border/50 flex flex-col"
+                >
+                  <CardHeader className="pb-3 flex-1">
+                    <div className="flex items-start justify-between w-full">
+                      <div className="min-w-0 flex-1 pr-4">
+                        <CardTitle className="text-base truncate">
+                          {snippet.title}
+                        </CardTitle>
+                        <CardDescription className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap break-all pr-2">
+                          {snippet.instructions || "No instructions provided"}
                         </CardDescription>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setEditingSnippet(snippet)}
+                          >
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDeleteSnippet(snippet.id)}
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -168,11 +377,13 @@ export function WorkflowModule() {
                       </DropdownMenu>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Paperclip className="h-4 w-4" />
-                      {snippet.attachments.length} requirement
-                      {snippet.attachments.length !== 1 ? 's' : ''}
+                  <CardContent className="pt-0">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                      <Paperclip className="h-4 w-4 shrink-0" />
+                      <span>
+                        {snippet.items?.length || 0} required attachment
+                        {(snippet.items?.length || 0) !== 1 ? "s" : ""}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -181,33 +392,50 @@ export function WorkflowModule() {
           )}
         </TabsContent>
       </Tabs>
-
+      {/* Edit Dialogs */}
       {editingTrack && (
-        <Dialog open={!!editingTrack} onOpenChange={() => setEditingTrack(null)}>
+        <Dialog
+          open={!!editingTrack}
+          onOpenChange={(open) => !open && setEditingTrack(null)}
+        >
           <EditTrackDialog
             track={editingTrack}
-            onSave={(updates) => {
-              updateOnboardingTrack(editingTrack.id, updates)
-              setEditingTrack(null)
-            }}
+            onSave={(name, mode, steps) =>
+              handleUpdateTrack(editingTrack.id, name, mode, steps)
+            }
             onClose={() => setEditingTrack(null)}
           />
         </Dialog>
       )}
+      {editingSnippet && (
+        <Dialog
+          open={!!editingSnippet}
+          onOpenChange={(open) => !open && setEditingSnippet(null)}
+        >
+          <EditSnippetDialog
+            snippet={editingSnippet}
+            onSave={(title, instructions, items) =>
+              handleUpdateSnippet(editingSnippet.id, title, instructions, items)
+            }
+            onClose={() => setEditingSnippet(null)}
+          />
+        </Dialog>
+      )}
     </div>
-  )
+  );
 }
 
+// Track Components
 function TrackCard({
   track,
   onEdit,
   onDelete,
-  onUpdate,
+  onToggleMode,
 }: {
-  track: OnboardingTrack
-  onEdit: () => void
-  onDelete: () => void
-  onUpdate: (updates: Partial<OnboardingTrack>) => void
+  track: WorkflowTrack;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleMode: () => void;
 }) {
   return (
     <Card className="border-border/50">
@@ -218,21 +446,27 @@ function TrackCard({
               {track.name}
               <span
                 className={cn(
-                  'text-xs px-2 py-0.5 rounded-full font-medium',
-                  track.mode === 'strict'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-purple-100 text-purple-700'
+                  "text-xs px-2 py-0.5 rounded-full font-medium",
+                  track.mode === "strict"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-purple-100 text-purple-700",
                 )}
               >
-                {track.mode === 'strict' ? 'Sequential' : 'Parallel'}
+                {track.mode === "strict" ? "Sequential" : "Parallel"}
               </span>
             </CardTitle>
             <CardDescription className="mt-1">
-              {track.steps.length} step{track.steps.length !== 1 && 's'} configured
+              {track.steps.length} mandatory step
+              {track.steps.length !== 1 && "s"} configured
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onEdit} className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEdit}
+              className="gap-2"
+            >
               <Edit2 className="h-4 w-4" />
               Edit
             </Button>
@@ -243,14 +477,14 @@ function TrackCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() =>
-                    onUpdate({ mode: track.mode === 'strict' ? 'parallel' : 'strict' })
-                  }
-                >
-                  Switch to {track.mode === 'strict' ? 'Parallel' : 'Sequential'}
+                <DropdownMenuItem onClick={onToggleMode}>
+                  Switch to{" "}
+                  {track.mode === "strict" ? "Parallel" : "Sequential"}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="text-destructive"
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Track
                 </DropdownMenuItem>
@@ -263,65 +497,97 @@ function TrackCard({
         <div className="space-y-2">
           {track.steps.map((step, index) => (
             <div
-              key={step.id}
+              key={step.id || index}
               className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
             >
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+              <span className="text-sm font-medium text-muted-foreground w-6">
+                {step.step_order}.
+              </span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">{step.name}</p>
-                {step.attachments.length > 0 && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <FileText className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {step.attachments.join(', ')}
-                    </span>
-                  </div>
+                <p className="text-sm font-medium text-foreground">
+                  {step.title}
+                </p>
+                {step.attachment_type && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Requires: {step.attachment_type}
+                  </p>
                 )}
               </div>
-
             </div>
           ))}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-function NewTrackDialog({ onSave }: { onSave: (track: OnboardingTrack) => void }) {
-  const [name, setName] = useState('')
-  const [mode, setMode] = useState<'strict' | 'parallel'>('strict')
-  const [steps, setSteps] = useState<OnboardingStep[]>([])
-  const [newStepName, setNewStepName] = useState('')
-  const [newStepAttachment, setNewStepAttachment] = useState('')
+function NewTrackDialog({
+  onSave,
+}: {
+  onSave: (
+    name: string,
+    mode: "strict" | "parallel",
+    steps: WorkflowStep[],
+  ) => void;
+}) {
+  const [name, setName] = useState("");
+  const [mode, setMode] = useState<"strict" | "parallel">("strict");
+  const [steps, setSteps] = useState<WorkflowStep[]>([]);
+
+  const [newStepTitle, setNewStepTitle] = useState("");
+  const [newStepAttachment, setNewStepAttachment] = useState("");
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleAddStep = () => {
-    if (!newStepName.trim()) return
+    if (!newStepTitle.trim()) return;
     setSteps([
       ...steps,
       {
-        id: Date.now().toString(),
-        name: newStepName,
-        mandatory: true,
-        attachments: newStepAttachment.trim() ? [newStepAttachment.trim()] : [],
+        step_order: steps.length + 1,
+        title: newStepTitle,
+        attachment_type: newStepAttachment.trim(),
       },
-    ])
-    setNewStepName('')
-    setNewStepAttachment('')
-  }
+    ]);
+    setNewStepTitle("");
+    setNewStepAttachment("");
+  };
 
   const handleSave = () => {
-    if (!name.trim() || steps.length === 0) return
-    onSave({
-      id: Date.now().toString(),
-      name,
-      mode,
-      steps,
-    })
-  }
+    if (!name.trim() || steps.length === 0) return;
+    onSave(name, mode, steps);
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newSteps = [...steps];
+    const draggedItem = newSteps[draggedIndex];
+
+    newSteps.splice(draggedIndex, 1);
+    newSteps.splice(index, 0, draggedItem);
+
+    const reorderedSteps = newSteps.map((s, i) => ({
+      ...s,
+      step_order: i + 1,
+    }));
+    setSteps(reorderedSteps);
+    setDraggedIndex(null);
+  };
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-xl">
       <DialogHeader>
         <DialogTitle>Create Onboarding Track</DialogTitle>
         <DialogDescription>
@@ -343,44 +609,56 @@ function NewTrackDialog({ onSave }: { onSave: (track: OnboardingTrack) => void }
           <Label>Flow Mode</Label>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => setMode('strict')}
+              onClick={() => setMode("strict")}
               className={`p-3 rounded-lg border text-left transition-colors ${
-                mode === 'strict'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
+                mode === "strict"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
               }`}
             >
               <p className="font-medium text-sm text-foreground">Sequential</p>
-              <p className="text-xs text-muted-foreground">Steps in order</p>
+              <p className="text-xs text-muted-foreground">
+                Steps must be done in order
+              </p>
             </button>
             <button
-              onClick={() => setMode('parallel')}
+              onClick={() => setMode("parallel")}
               className={`p-3 rounded-lg border text-left transition-colors ${
-                mode === 'parallel'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
+                mode === "parallel"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
               }`}
             >
               <p className="font-medium text-sm text-foreground">Parallel</p>
-              <p className="text-xs text-muted-foreground">Any order</p>
+              <p className="text-xs text-muted-foreground">Done in any order</p>
             </button>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Steps</Label>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
+        <div className="space-y-2 border-t pt-4">
+          <Label>Steps Setup</Label>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
             {steps.map((step, index) => (
               <div
-                key={step.id}
-                className="flex items-center gap-2 p-2 bg-muted/50 rounded"
+                key={index}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                className={cn(
+                  "flex items-center gap-2 p-2 bg-muted/50 rounded border border-transparent transition-all cursor-move",
+                  draggedIndex === index && "opacity-50 border-primary",
+                )}
               >
-                <span className="text-sm text-muted-foreground">{index + 1}.</span>
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground w-4">
+                  {step.step_order}.
+                </span>
                 <div className="flex-1">
-                  <span className="text-sm">{step.name}</span>
-                  {step.attachments.length > 0 && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      ({step.attachments.join(', ')})
+                  <span className="text-sm font-medium">{step.title}</span>
+                  {step.attachment_type && (
+                    <span className="text-xs ml-2 text-muted-foreground">
+                      ({step.attachment_type})
                     </span>
                   )}
                 </div>
@@ -388,40 +666,62 @@ function NewTrackDialog({ onSave }: { onSave: (track: OnboardingTrack) => void }
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => setSteps(steps.filter((s) => s.id !== step.id))}
+                  onClick={() =>
+                    setSteps(
+                      steps
+                        .filter((_, i) => i !== index)
+                        .map((s, i) => ({ ...s, step_order: i + 1 })),
+                    )
+                  }
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             ))}
+            {steps.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-lg">
+                No steps added yet. Add a step below.
+              </p>
+            )}
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
             <div className="flex gap-2">
               <Input
-                placeholder="Step Title..."
-                value={newStepName}
-                onChange={(e) => setNewStepName(e.target.value)}
+                placeholder="Step Title (e.g., Submit ID)"
+                value={newStepTitle}
+                onChange={(e) => setNewStepTitle(e.target.value)}
+                className="flex-1"
               />
               <Input
-                placeholder="Attachment Type (e.g., ID, Photo)..."
+                placeholder="Attachment Type (Optional)"
                 value={newStepAttachment}
                 onChange={(e) => setNewStepAttachment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddStep()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddStep()}
+                className="flex-1"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={handleAddStep} className="w-full">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddStep}
+              className="w-full"
+            >
               Add Step
             </Button>
           </div>
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={handleSave} disabled={!name.trim() || steps.length === 0}>
+        <Button
+          onClick={handleSave}
+          disabled={!name.trim() || steps.length === 0}
+        >
           Create Track
         </Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
 }
 
 function EditTrackDialog({
@@ -429,36 +729,72 @@ function EditTrackDialog({
   onSave,
   onClose,
 }: {
-  track: OnboardingTrack
-  onSave: (updates: Partial<OnboardingTrack>) => void
-  onClose: () => void
+  track: WorkflowTrack;
+  onSave: (
+    name: string,
+    mode: "strict" | "parallel",
+    steps: WorkflowStep[],
+  ) => void;
+  onClose: () => void;
 }) {
-  const [name, setName] = useState(track.name)
-  const [mode, setMode] = useState(track.mode)
-  const [steps, setSteps] = useState(track.steps)
-  const [newStepName, setNewStepName] = useState('')
-  const [newStepAttachment, setNewStepAttachment] = useState('')
+  const [name, setName] = useState(track.name);
+  const [mode, setMode] = useState(track.mode);
+  const [steps, setSteps] = useState<WorkflowStep[]>(track.steps);
+
+  const [newStepTitle, setNewStepTitle] = useState("");
+  const [newStepAttachment, setNewStepAttachment] = useState("");
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleAddStep = () => {
-    if (!newStepName.trim()) return
+    if (!newStepTitle.trim()) return;
     setSteps([
       ...steps,
       {
-        id: Date.now().toString(),
-        name: newStepName,
-        mandatory: true,
-        attachments: newStepAttachment.trim() ? [newStepAttachment.trim()] : [],
+        step_order: steps.length + 1,
+        title: newStepTitle,
+        attachment_type: newStepAttachment.trim(),
       },
-    ])
-    setNewStepName('')
-    setNewStepAttachment('')
-  }
+    ]);
+    setNewStepTitle("");
+    setNewStepAttachment("");
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newSteps = [...steps];
+    const draggedItem = newSteps[draggedIndex];
+
+    newSteps.splice(draggedIndex, 1);
+    newSteps.splice(index, 0, draggedItem);
+
+    const reorderedSteps = newSteps.map((s, i) => ({
+      ...s,
+      step_order: i + 1,
+    }));
+    setSteps(reorderedSteps);
+    setDraggedIndex(null);
+  };
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-xl">
       <DialogHeader>
         <DialogTitle>Edit Track</DialogTitle>
-        <DialogDescription>Modify your onboarding track settings</DialogDescription>
+        <DialogDescription>
+          Modify your onboarding track settings
+        </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="space-y-2">
@@ -470,21 +806,21 @@ function EditTrackDialog({
           <Label>Flow Mode</Label>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => setMode('strict')}
+              onClick={() => setMode("strict")}
               className={`p-3 rounded-lg border text-left transition-colors ${
-                mode === 'strict'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
+                mode === "strict"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
               }`}
             >
               <p className="font-medium text-sm">Sequential</p>
             </button>
             <button
-              onClick={() => setMode('parallel')}
+              onClick={() => setMode("parallel")}
               className={`p-3 rounded-lg border text-left transition-colors ${
-                mode === 'parallel'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
+                mode === "parallel"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
               }`}
             >
               <p className="font-medium text-sm">Parallel</p>
@@ -492,20 +828,30 @@ function EditTrackDialog({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Steps</Label>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
+        <div className="space-y-2 border-t pt-4">
+          <Label>Manage Steps</Label>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
             {steps.map((step, index) => (
               <div
-                key={step.id}
-                className="flex items-center gap-2 p-2 bg-muted/50 rounded"
+                key={index}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                className={cn(
+                  "flex items-center gap-2 p-2 bg-muted/50 rounded border border-transparent transition-all cursor-move",
+                  draggedIndex === index && "opacity-50 border-primary",
+                )}
               >
-                <span className="text-sm text-muted-foreground">{index + 1}.</span>
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground w-4">
+                  {step.step_order}.
+                </span>
                 <div className="flex-1">
-                  <span className="text-sm">{step.name}</span>
-                  {step.attachments.length > 0 && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      ({step.attachments.join(', ')})
+                  <span className="text-sm font-medium">{step.title}</span>
+                  {step.attachment_type && (
+                    <span className="text-xs ml-2 text-muted-foreground">
+                      ({step.attachment_type})
                     </span>
                   )}
                 </div>
@@ -513,28 +859,42 @@ function EditTrackDialog({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => setSteps(steps.filter((s) => s.id !== step.id))}
+                  onClick={() =>
+                    setSteps(
+                      steps
+                        .filter((_, i) => i !== index)
+                        .map((s, i) => ({ ...s, step_order: i + 1 })),
+                    )
+                  }
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             ))}
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
             <div className="flex gap-2">
               <Input
-                placeholder="Step Title..."
-                value={newStepName}
-                onChange={(e) => setNewStepName(e.target.value)}
+                placeholder="Step Title (e.g., Submit ID)"
+                value={newStepTitle}
+                onChange={(e) => setNewStepTitle(e.target.value)}
+                className="flex-1"
               />
               <Input
-                placeholder="Attachment Type (e.g., ID, Photo)..."
+                placeholder="Attachment Type (Optional)"
                 value={newStepAttachment}
                 onChange={(e) => setNewStepAttachment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddStep()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddStep()}
+                className="flex-1"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={handleAddStep} className="w-full">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddStep}
+              className="w-full"
+            >
               Add Step
             </Button>
           </div>
@@ -544,102 +904,86 @@ function EditTrackDialog({
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={() => onSave({ name, mode, steps })}>Save Changes</Button>
+        <Button onClick={() => onSave(name, mode, steps)}>Save Changes</Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
 }
 
-type SnippetItem = {
-  id: string
-  title: string
-  attachmentTitle: string
-  description: string
-}
-
+// Snippet Components
 function NewSnippetDialog({
   onSave,
 }: {
-  onSave: (snippet: {
-    id: string
-    name: string
-    description: string
-    attachments: string[]
-    instructions: string
-    items?: SnippetItem[]
-  }) => void
+  onSave: (title: string, instructions: string, items: SnippetItem[]) => void;
 }) {
-  const [name, setName] = useState('')
-  const [items, setItems] = useState<SnippetItem[]>([])
-  const [newItemTitle, setNewItemTitle] = useState('')
-  const [newItemAttachment, setNewItemAttachment] = useState('')
-  const [newItemDescription, setNewItemDescription] = useState('')
+  const [title, setTitle] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [items, setItems] = useState<SnippetItem[]>([]);
+  const [newItemTitle, setNewItemTitle] = useState("");
+  const [newItemAttachment, setNewItemAttachment] = useState("");
 
   const handleAddItem = () => {
-    if (!newItemTitle.trim()) return
+    if (!newItemTitle.trim()) return;
     setItems([
       ...items,
       {
         id: Date.now().toString(),
         title: newItemTitle.trim(),
         attachmentTitle: newItemAttachment.trim(),
-        description: newItemDescription.trim(),
       },
-    ])
-    setNewItemTitle('')
-    setNewItemAttachment('')
-    setNewItemDescription('')
-  }
+    ]);
+    setNewItemTitle("");
+    setNewItemAttachment("");
+  };
 
   const handleSave = () => {
-    if (!name.trim() || items.length === 0) return
-    onSave({
-      id: Date.now().toString(),
-      name,
-      description: `${items.length} requirement${items.length !== 1 ? 's' : ''}`,
-      attachments: items.map((item) => item.attachmentTitle).filter(Boolean),
-      instructions: '',
-      items,
-    })
-  }
+    if (!title.trim() || items.length === 0) return;
+    onSave(title, instructions, items);
+  };
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-xl">
       <DialogHeader>
         <DialogTitle>Create Document Snippet</DialogTitle>
         <DialogDescription>
-          Build a micro-template with multiple requirements
+          Build a reusable multi-document request for your existing hires
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Snippet Name</Label>
+          <Label>Snippet Title</Label>
           <Input
-            placeholder="e.g., New Hire Document Pack"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Government Forms"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>General Instructions</Label>
+          <Textarea
+            placeholder="e.g., Please read the required forms carefully and ensure all documents uploaded are clear and valid."
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            className="resize-none h-24"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Requirements</Label>
+        <div className="space-y-2 border-t pt-4">
+          <Label>Required Attachments</Label>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {items.map((item, index) => (
               <div
                 key={item.id}
                 className="flex items-start gap-2 p-2 bg-muted/50 rounded"
               >
-                <span className="text-sm text-muted-foreground mt-0.5">{index + 1}.</span>
+                <span className="text-sm font-medium text-muted-foreground w-4 mt-0.5">
+                  {index + 1}.
+                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{item.title}</p>
                   {item.attachmentTitle && (
                     <p className="text-xs text-muted-foreground">
-                      Attachment: {item.attachmentTitle}
-                    </p>
-                  )}
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {item.description}
+                      Format/Type: {item.attachmentTitle}
                     </p>
                   )}
                 </div>
@@ -647,41 +991,192 @@ function NewSnippetDialog({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 shrink-0"
-                  onClick={() => setItems(items.filter((i) => i.id !== item.id))}
+                  onClick={() =>
+                    setItems(items.filter((i) => i.id !== item.id))
+                  }
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             ))}
+            {items.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-lg">
+                No attachments required yet.
+              </p>
+            )}
           </div>
-          <div className="space-y-2 p-3 border border-dashed border-border rounded-lg">
-            <Input
-              placeholder="Title (e.g., Submit Government ID)"
-              value={newItemTitle}
-              onChange={(e) => setNewItemTitle(e.target.value)}
-            />
-            <Input
-              placeholder="Title of Attachment (e.g., Company ID)"
-              value={newItemAttachment}
-              onChange={(e) => setNewItemAttachment(e.target.value)}
-            />
-            <Input
-              placeholder="Description (optional)"
-              value={newItemDescription}
-              onChange={(e) => setNewItemDescription(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-            />
-            <Button variant="outline" size="sm" onClick={handleAddItem} className="w-full">
-              Add Requirement
+
+          <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Requirement (e.g., Valid ID)"
+                value={newItemTitle}
+                onChange={(e) => setNewItemTitle(e.target.value)}
+                className="flex-1"
+              />
+              <Input
+                placeholder="Type (e.g., PDF/Image)"
+                value={newItemAttachment}
+                onChange={(e) => setNewItemAttachment(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
+                className="flex-1"
+              />
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddItem}
+              className="w-full"
+            >
+              Add Required Attachment
             </Button>
           </div>
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={handleSave} disabled={!name.trim() || items.length === 0}>
+        <Button
+          onClick={handleSave}
+          disabled={!title.trim() || items.length === 0}
+        >
           Create Snippet
         </Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
+}
+
+function EditSnippetDialog({
+  snippet,
+  onSave,
+  onClose,
+}: {
+  snippet: DocumentSnippet;
+  onSave: (title: string, instructions: string, items: SnippetItem[]) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(snippet.title);
+  const [instructions, setInstructions] = useState(snippet.instructions || "");
+  const [items, setItems] = useState<SnippetItem[]>(snippet.items || []);
+  const [newItemTitle, setNewItemTitle] = useState("");
+  const [newItemAttachment, setNewItemAttachment] = useState("");
+
+  const handleAddItem = () => {
+    if (!newItemTitle.trim()) return;
+    setItems([
+      ...items,
+      {
+        id: Date.now().toString(),
+        title: newItemTitle.trim(),
+        attachmentTitle: newItemAttachment.trim(),
+      },
+    ]);
+    setNewItemTitle("");
+    setNewItemAttachment("");
+  };
+
+  const handleSave = () => {
+    if (!title.trim() || items.length === 0) return;
+    onSave(title, instructions, items);
+  };
+
+  return (
+    <DialogContent className="sm:max-w-xl">
+      <DialogHeader>
+        <DialogTitle>Edit Document Snippet</DialogTitle>
+        <DialogDescription>
+          Modify your reusable multi-document request
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Snippet Title</Label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>General Instructions</Label>
+          <Textarea
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            className="resize-none h-24"
+          />
+        </div>
+
+        <div className="space-y-2 border-t pt-4">
+          <Label>Required Attachments</Label>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {items.map((item, index) => (
+              <div
+                key={item.id}
+                className="flex items-start gap-2 p-2 bg-muted/50 rounded"
+              >
+                <span className="text-sm font-medium text-muted-foreground w-4 mt-0.5">
+                  {index + 1}.
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{item.title}</p>
+                  {item.attachmentTitle && (
+                    <p className="text-xs text-muted-foreground">
+                      Format/Type: {item.attachmentTitle}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={() =>
+                    setItems(items.filter((i) => i.id !== item.id))
+                  }
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            {items.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-lg">
+                No attachments required.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Requirement (e.g., Valid ID)"
+                value={newItemTitle}
+                onChange={(e) => setNewItemTitle(e.target.value)}
+                className="flex-1"
+              />
+              <Input
+                placeholder="Type (e.g., PDF/Image)"
+                value={newItemAttachment}
+                onChange={(e) => setNewItemAttachment(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
+                className="flex-1"
+              />
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddItem}
+              className="w-full"
+            >
+              Add Required Attachment
+            </Button>
+          </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={!title.trim() || items.length === 0}
+        >
+          Save Changes
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
 }
