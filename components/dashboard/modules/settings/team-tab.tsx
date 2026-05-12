@@ -1,7 +1,7 @@
 "use client";
 
 // Imports
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/lib/providers/tenant-provider";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,6 @@ import {
   Trash2,
   Edit,
   Loader2,
-  Save,
   Search,
   UserPlus,
   X,
@@ -62,12 +61,12 @@ import { useToast } from "@/components/ui/use-toast";
 
 // Types
 type RolePermissions = {
-  pipeline: boolean;
-  workflow: boolean;
-  people: boolean;
+  workflow_engine: boolean;
+  people_directory: boolean;
   vault: boolean;
-  settings: boolean;
-  team: boolean;
+  organization: boolean;
+  brand_identity: boolean;
+  staff_directory: boolean;
 };
 
 type CompanyRole = {
@@ -75,6 +74,24 @@ type CompanyRole = {
   name: string;
   description: string;
   permissions: RolePermissions;
+};
+
+const PERMISSION_LABELS: Record<string, string> = {
+  workflow_engine: "Workflow Engine",
+  people_directory: "People & Directory",
+  vault: "The Vault",
+  organization: "Organization",
+  brand_identity: "Brand Identity",
+  staff_directory: "Staff Directory",
+};
+
+const DEFAULT_PERMISSIONS: RolePermissions = {
+  workflow_engine: false,
+  people_directory: false,
+  vault: false,
+  organization: false,
+  brand_identity: false,
+  staff_directory: false,
 };
 
 // Main Component
@@ -87,42 +104,97 @@ export function TeamTab() {
   const [roles, setRoles] = useState<CompanyRole[]>([]);
   const [hiredClients, setHiredClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<CompanyRole | null>(null);
 
   // Fetch functions
-  const fetchData = async () => {
-    if (!tenant) return;
-    setLoading(true);
+  const fetchData = useCallback(async () => {
+    if (!tenant?.id) return;
 
-    const [membersRes, rolesRes, clientsRes] = await Promise.all([
-      supabase
-        .from("team_members")
-        .select("*, user:user_id(email, raw_user_meta_data)")
-        .eq("company_id", tenant.id),
-      supabase
-        .from("company_roles")
-        .select("*")
-        .eq("company_id", tenant.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("clients")
-        .select("id, full_name, email")
-        .eq("company_id", tenant.id)
-        .eq("status", "hired"),
-    ]);
+    try {
+      setLoading(true);
 
-    if (membersRes.data) setMembers(membersRes.data);
-    if (rolesRes.data) setRoles(rolesRes.data);
-    if (clientsRes.data) setHiredClients(clientsRes.data);
-    setLoading(false);
-  };
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+
+      const [membersRes, rolesRes, clientsRes] = await Promise.all([
+        supabase.from("team_members").select("*").eq("company_id", tenant.id),
+        supabase
+          .from("company_roles")
+          .select("*")
+          .eq("company_id", tenant.id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("clients")
+          .select("id, full_name, email")
+          .eq("company_id", tenant.id)
+          .eq("status", "hired"),
+      ]);
+
+      if (membersRes.data) {
+        const teamData = membersRes.data as any[];
+
+        const userIds = teamData.map((m) => m.user_id).filter(Boolean);
+        let tenantProfiles: any[] = [];
+
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("tenants")
+            .select("user_id, full_name, email")
+            .in("user_id", userIds);
+
+          if (profilesData) {
+            tenantProfiles = profilesData;
+          }
+        }
+
+        const mergedMembers = teamData.map((m) => ({
+          ...m,
+          profile: tenantProfiles.find((p) => p.user_id === m.user_id) || null,
+        }));
+
+        setMembers(mergedMembers);
+
+        if (user) {
+          const currentMember = mergedMembers.find(
+            (m: any) => m.user_id === user.id,
+          );
+
+          const roleName = currentMember?.role
+            ? String(currentMember.role).toLowerCase().trim()
+            : "";
+
+          const isRoleOwner = roleName === "owner" || roleName === "admin";
+          const isCompanyOwner = tenant?.owner_id === user.id;
+
+          setIsOwner(isRoleOwner || isCompanyOwner);
+        }
+      }
+
+      if (rolesRes.data) setRoles(rolesRes.data);
+      if (clientsRes.data) setHiredClients(clientsRes.data);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching data",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [tenant, supabase, toast]);
 
   useEffect(() => {
     fetchData();
-  }, [tenant]);
+  }, [fetchData]);
 
   // Handlers
   const handleDeleteRole = async (id: string) => {
@@ -162,7 +234,7 @@ export function TeamTab() {
   if (loading) {
     return (
       <div className="flex justify-center p-12">
-        <Loader2 className="animate-spin text-muted-foreground" />
+        <Loader2 className="animate-spin text-muted-foreground h-8 w-8" />
       </div>
     );
   }
@@ -170,103 +242,108 @@ export function TeamTab() {
   return (
     <div className="space-y-8">
       {/* Role Builder Section */}
-      <Card className="border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Shield className="h-5 w-5" /> Role Builder
-            </CardTitle>
-            <CardDescription>
-              Customize specific permissions for your organization
-            </CardDescription>
-          </div>
-          <Button
-            onClick={() => {
-              setEditingRole(null);
-              setRoleDialogOpen(true);
-            }}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" /> New Role
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Role Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles.length === 0 ? (
+      {isOwner && (
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Shield className="h-5 w-5" /> Role Builder
+              </CardTitle>
+              <CardDescription>
+                Customize specific permissions for your organization
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingRole(null);
+                setRoleDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" /> New Role
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center py-8 text-muted-foreground"
-                    >
-                      No custom roles defined.
-                    </TableCell>
+                    <TableHead>Role Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Permissions</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
                   </TableRow>
-                ) : (
-                  roles.map((role) => (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium">{role.name}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {role.description}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(role.permissions || {}).map(
-                            ([key, val]) =>
-                              val && (
-                                <Badge
-                                  key={key}
-                                  variant="secondary"
-                                  className="text-[10px] capitalize font-normal"
-                                >
-                                  {key}
-                                </Badge>
-                              ),
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditingRole(role);
-                                setRoleDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4 mr-2" /> Edit Role
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteRole(role.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                </TableHeader>
+                <TableBody>
+                  {roles.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        No custom roles defined.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  ) : (
+                    roles.map((role) => (
+                      <TableRow key={role.id}>
+                        <TableCell className="font-medium">
+                          {role.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {role.description}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(role.permissions || {}).map(
+                              ([key, val]) =>
+                                val && (
+                                  <Badge
+                                    key={key}
+                                    variant="secondary"
+                                    className="text-[10px] font-normal"
+                                  >
+                                    {PERMISSION_LABELS[key] ||
+                                      key.replace("_", " ")}
+                                  </Badge>
+                                ),
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingRole(role);
+                                  setRoleDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" /> Edit Role
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDeleteRole(role.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Staff Directory Section */}
       <Card className="border-border/50">
@@ -274,65 +351,75 @@ export function TeamTab() {
           <div>
             <CardTitle className="text-lg">Staff Directory</CardTitle>
             <CardDescription>
-              Manage active team members and their roles
+              View active team members and their roles
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setAddMemberDialogOpen(true)}
-            className="gap-2"
-          >
-            <UserPlus className="h-4 w-4" /> Add Staff
-          </Button>
+          {isOwner && (
+            <Button
+              variant="outline"
+              onClick={() => setAddMemberDialogOpen(true)}
+              className="gap-2"
+            >
+              <UserPlus className="h-4 w-4" /> Add Staff
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {members.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center gap-4 p-3 rounded-lg border border-border"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-medium">
-                  {
-                    (m.user?.raw_user_meta_data?.full_name ||
-                      m.user?.raw_user_meta_data?.fullName ||
-                      "?")[0]
-                  }
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">
-                    {m.user?.raw_user_meta_data?.full_name ||
-                      m.user?.raw_user_meta_data?.fullName ||
-                      "Unknown Member"}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Mail className="h-3 w-3" /> {m.user?.email}
-                    <span className="mx-1">•</span>
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] h-5 capitalize"
-                    >
-                      {m.role}
-                    </Badge>
+            {members.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No active staff members found.
+              </p>
+            ) : (
+              members.map((m) => {
+                const displayName = m.profile?.full_name || "Unknown Member";
+                const displayEmail = m.profile?.email || "No email available";
+                const initial = displayName.charAt(0).toUpperCase();
+                const isMemberOwner = m.role?.toLowerCase() === "owner";
+                const isCurrentUser = m.user_id === currentUserId;
+
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-4 p-3 rounded-lg border border-border"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-medium">
+                      {initial}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{displayName}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3" /> {displayEmail}
+                        <span className="mx-1">•</span>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 capitalize"
+                        >
+                          {m.role}
+                        </Badge>
+                      </div>
+                    </div>
+                    {isOwner && !isMemberOwner && !isCurrentUser && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleRemoveMember(m.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Revoke Access
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => handleRemoveMember(m.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Revoke Access
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
@@ -383,8 +470,8 @@ function AddMemberDialog({
 
   const filteredClients = hiredClients.filter(
     (c: any) =>
-      (c.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        c.email.toLowerCase().includes(search.toLowerCase())) &&
+      (c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.email?.toLowerCase().includes(search.toLowerCase())) &&
       c.id !== selectedClient?.id,
   );
 
@@ -438,7 +525,7 @@ function AddMemberDialog({
           <div className="flex items-center justify-between p-3 rounded-lg border border-primary bg-primary/5">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                {selectedClient.full_name[0]}
+                {selectedClient.full_name?.charAt(0) || "?"}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">
@@ -482,7 +569,7 @@ function AddMemberDialog({
                     }}
                   >
                     <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold uppercase">
-                      {c.full_name[0]}
+                      {c.full_name?.charAt(0) || "?"}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate">
@@ -543,49 +630,18 @@ function RoleDialog({ role, companyId, onSave, close }: any) {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [permissions, setPermissions] = useState<RolePermissions>({
-    pipeline: false,
-    workflow: false,
-    people: false,
-    vault: false,
-    settings: false,
-    team: false,
-  });
-
-  const permissionLabels: Record<string, string> = {
-    pipeline: "Dashboard Access",
-    workflow: "Workflow Management",
-    people: "Client Management",
-    vault: "Document Repository",
-    settings: "Workspace Settings",
-    team: "Team Management",
-  };
+  const [permissions, setPermissions] =
+    useState<RolePermissions>(DEFAULT_PERMISSIONS);
 
   useEffect(() => {
     if (role) {
       setName(role.name || "");
       setDescription(role.description || "");
-      setPermissions(
-        role.permissions || {
-          pipeline: false,
-          workflow: false,
-          people: false,
-          vault: false,
-          settings: false,
-          team: false,
-        },
-      );
+      setPermissions(role.permissions || DEFAULT_PERMISSIONS);
     } else {
       setName("");
       setDescription("");
-      setPermissions({
-        pipeline: false,
-        workflow: false,
-        people: false,
-        vault: false,
-        settings: false,
-        team: false,
-      });
+      setPermissions(DEFAULT_PERMISSIONS);
     }
   }, [role]);
 
@@ -636,8 +692,8 @@ function RoleDialog({ role, companyId, onSave, close }: any) {
                 key={key}
                 className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
               >
-                <p className="text-sm font-medium capitalize">
-                  {permissionLabels[key] || key}
+                <p className="text-sm font-medium">
+                  {PERMISSION_LABELS[key] || key.replace("_", " ")}
                 </p>
                 <Switch
                   checked={(permissions as any)[key]}

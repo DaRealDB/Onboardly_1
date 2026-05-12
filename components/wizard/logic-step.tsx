@@ -1,5 +1,6 @@
 "use client";
 
+// Imports
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -25,6 +26,7 @@ import {
   Settings2,
 } from "lucide-react";
 
+// Types
 interface Step {
   id: string;
   name: string;
@@ -35,8 +37,9 @@ interface Step {
 export function LogicStep() {
   const router = useRouter();
   const supabase = createClient();
-  const { tenant, addOnboardingTrack } = useAppStore();
+  const { tenant } = useAppStore();
 
+  // State
   const [trackName, setTrackName] = useState("Default Onboarding");
   const [mode, setMode] = useState<"strict" | "parallel">("strict");
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +60,9 @@ export function LogicStep() {
   ]);
   const [newStepName, setNewStepName] = useState("");
   const [newStepAttachment, setNewStepAttachment] = useState("");
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
+  // Handlers
   const handleAddStep = () => {
     if (!newStepName.trim()) return;
     setSteps([
@@ -82,38 +87,82 @@ export function LogicStep() {
     setCurrentView("wizard-theme");
   };
 
-  // THE FIXED LAUNCH LOGIC
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (index: number) => {
+    if (draggedIndex === null || draggedIndex === index) return;
+    const newSteps = [...steps];
+    const draggedStep = newSteps[draggedIndex];
+    newSteps.splice(draggedIndex, 1);
+    newSteps.splice(index, 0, draggedStep);
+    setSteps(newSteps);
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   const handleLaunch = async () => {
     setIsLoading(true);
     try {
-      // 1. Get current user for the owner_id requirement
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) throw new Error("No session found");
 
-      // 2. Create the Company using the NEW schema
+      // 1. Create the Company
       const { data: newCompany, error: companyError } = await supabase
-        .from("companies") // FIXED: 'tenants' -> 'companies'
+        .from("companies")
         .insert({
           owner_id: session.user.id,
           name: tenant?.companyName || trackName,
           slug: tenant?.workspaceUrl || `org-${Date.now()}`,
           brand_color: tenant?.primaryColor || "#3B82F6",
-          // REMOVED: default_logic_mode (since we dropped this column)
         })
         .select()
         .single();
 
       if (companyError) throw companyError;
 
-      // REMOVED: workflow_templates insert code because we dropped that table!
-      // Once you rebuild the workflow feature, you can add it back here.
+      // 2. Create the Workflow Track linked to the Company
+      const { data: newTrack, error: trackError } = await supabase
+        .from("workflow_tracks")
+        .insert({
+          company_id: newCompany.id,
+          name: trackName,
+          mode: mode,
+        })
+        .select()
+        .single();
+
+      if (trackError) throw trackError;
+
+      // 3. Insert the individual Workflow Steps
+      if (steps.length > 0) {
+        const stepsToInsert = steps.map((step, index) => ({
+          track_id: newTrack.id,
+          step_order: index + 1,
+          title: step.name,
+          attachment_type:
+            step.attachments.length > 0 ? step.attachments.join(", ") : "none",
+        }));
+
+        const { error: stepsError } = await supabase
+          .from("workflow_steps")
+          .insert(stepsToInsert);
+
+        if (stepsError) throw stepsError;
+      }
 
       toast.success("Workspace launched successfully!");
-
-      // 3. Hard Redirect to Dashboard
-      router.push("/dashboard");
+      router.push("/tenantdashboard");
       router.refresh();
     } catch (err: any) {
       toast.error("Launch failed", { description: err.message });
@@ -123,6 +172,7 @@ export function LogicStep() {
     }
   };
 
+  // Render
   return (
     <Card className="border-border/50 shadow-sm">
       <CardHeader>
@@ -135,6 +185,7 @@ export function LogicStep() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Track Name Input */}
         <div className="space-y-2">
           <Label htmlFor="trackName">Track Name</Label>
           <Input
@@ -145,6 +196,7 @@ export function LogicStep() {
           />
         </div>
 
+        {/* Mode Selector */}
         <div className="space-y-3">
           <Label>Flow Mode</Label>
           <div className="grid grid-cols-2 gap-3">
@@ -177,15 +229,25 @@ export function LogicStep() {
           </div>
         </div>
 
+        {/* Steps List */}
         <div className="space-y-3">
           <Label>Onboarding Steps</Label>
           <div className="space-y-2">
             {steps.map((step, index) => (
               <div
                 key={step.id}
-                className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border"
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+                className={`flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border transition-opacity ${
+                  draggedIndex === index ? "opacity-50" : "opacity-100"
+                }`}
               >
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                <div className="cursor-grab active:cursor-grabbing p-1">
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                </div>
                 <span className="text-sm text-muted-foreground w-6">
                   {index + 1}.
                 </span>
@@ -214,6 +276,7 @@ export function LogicStep() {
             ))}
           </div>
 
+          {/* Add Step Inputs */}
           <div className="space-y-2">
             <div className="flex gap-2">
               <Input
@@ -239,6 +302,7 @@ export function LogicStep() {
           </div>
         </div>
 
+        {/* Footer Actions */}
         <div className="pt-4 flex justify-between">
           <Button variant="outline" onClick={handleBack} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
