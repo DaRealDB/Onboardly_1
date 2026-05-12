@@ -1369,23 +1369,37 @@ function AddClientDialog({
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        {tracks.length > 0 && (
-          <div className="space-y-2">
-            <Label>Assign Track</Label>
-            <Select value={selectedTrack} onValueChange={setSelectedTrack}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select an onboarding track..." />
-              </SelectTrigger>
-              <SelectContent>
-                {tracks.map((track) => (
+        <div className="space-y-2">
+          <Label>Assign Track</Label>
+          <Select
+            value={selectedTrack}
+            onValueChange={setSelectedTrack}
+            disabled={tracks.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue
+                placeholder={
+                  tracks.length > 0
+                    ? "Select an onboarding track..."
+                    : "No tracks available"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {tracks.length === 0 ? (
+                <p className="p-4 text-xs text-center text-muted-foreground italic">
+                  No tracks found. Create one in the Workflow Engine first.
+                </p>
+              ) : (
+                tracks.map((track) => (
                   <SelectItem key={track.id} value={track.id}>
                     {track.name}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <DialogFooter>
         <Button
