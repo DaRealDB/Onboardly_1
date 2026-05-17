@@ -35,7 +35,7 @@ export default function WorkspacesPage() {
         const mapped = data.map((company: any) => ({
           id: company.id,
           name: company.name,
-          subdomain: company.slug, // This is just the raw slug from Supabase
+          subdomain: company.slug,
           candidates: company.clients?.length || 0,
         }));
         setWorkspaces(mapped);
@@ -49,6 +49,7 @@ export default function WorkspacesPage() {
     if (!deletingId) return;
     setIsDeleting(true);
 
+    // This specifically targets only the company row
     const { error } = await supabase
       .from("companies")
       .delete()
@@ -56,6 +57,7 @@ export default function WorkspacesPage() {
 
     if (error) {
       console.error("Error deleting workspace:", error);
+      alert(`Delete failed: ${error.message}. Did you run the SQL policy?`);
     } else {
       // Remove the deleted workspace from the UI
       setWorkspaces((prev) => prev.filter((w) => w.id !== deletingId));
@@ -111,7 +113,6 @@ export default function WorkspacesPage() {
                 <TableCell>
                   <div>
                     <p className="font-medium text-foreground">{ws.name}</p>
-                    {/* Removed the hardcoded .onboardly.app here */}
                     <p className="text-xs text-muted-foreground">
                       {ws.subdomain || "No slug"}
                     </p>

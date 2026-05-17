@@ -12,13 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Upload, Building2, Globe, ArrowRight } from "lucide-react";
+import { Upload, Building2, ArrowRight } from "lucide-react";
 
 export function IdentityStep() {
   const { setCurrentView, setTenant } = useAppStore();
   const [companyName, setCompanyName] = useState("");
   const [slug, setSlug] = useState("");
-  const [isSlugEdited, setIsSlugEdited] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,20 +25,14 @@ export function IdentityStep() {
     const val = e.target.value;
     setCompanyName(val);
 
-    // Auto-generate slug only if they haven't manually typed in the slug box
-    if (!isSlugEdited) {
-      setSlug(
-        val
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "-")
-          .replace(/-+/g, "-"),
-      );
-    }
-  };
-
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsSlugEdited(true);
-    setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+    // Strictly auto-generates the slug from the company name
+    setSlug(
+      val
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, ""), // Removes hanging hyphens at the start/end
+    );
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +49,7 @@ export function IdentityStep() {
   const handleContinue = () => {
     setTenant({
       companyName,
-      workspaceUrl: slug, // Sends purely the slug, no .com attached to the state
+      workspaceUrl: slug,
       logo: logo || undefined,
       primaryColor: "#6366f1",
       secondaryColor: "#22c55e",
@@ -64,6 +57,7 @@ export function IdentityStep() {
     setCurrentView("wizard-theme");
   };
 
+  // Card
   return (
     <Card className="border-border/50 shadow-sm">
       <CardHeader>
@@ -75,6 +69,7 @@ export function IdentityStep() {
           Tell us about your company and customize your workspace
         </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="companyName">Company Name</Label>
@@ -87,24 +82,15 @@ export function IdentityStep() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="slugInput">Workspace URL</Label>
-          <div className="relative flex h-10 w-full items-center overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <div className="grid w-full">
-              {/* Ghost layer that positions the solid black .com snugly at the end */}
-              <div className="col-start-1 row-start-1 flex items-center pointer-events-none whitespace-pre">
-                <span className="invisible">{slug || "your-company"}</span>
-                <span className="text-foreground font-medium">.com</span>
-              </div>
-              {/* Interactive input layer placed directly on top */}
-              <input
-                id="slugInput"
-                type="text"
-                value={slug}
-                onChange={handleSlugChange}
-                placeholder="your-company"
-                className="col-start-1 row-start-1 bg-transparent w-full focus:outline-none text-foreground placeholder:text-muted-foreground z-10"
-              />
-            </div>
+          <Label>Workspace URL</Label>
+          {/* Read-only stylized div instead of an input */}
+          <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted/30 px-3 py-2 text-sm cursor-not-allowed overflow-hidden">
+            <span className="text-foreground font-medium truncate">
+              {slug || "your-company"}
+            </span>
+            <span className="text-muted-foreground whitespace-nowrap">
+              .com
+            </span>
           </div>
           <p className="text-xs text-muted-foreground">
             This will be your unique workspace URL
