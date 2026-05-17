@@ -1,13 +1,6 @@
-import React, { useState } from "react";
-import { Search, Filter, Trash2, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,81 +10,70 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-
-const workspaces = [
-  {
-    id: 1,
-    name: "Acme Corp",
-    subdomain: "acme",
-    status: "active",
-    candidates: 1240,
-  },
-  {
-    id: 2,
-    name: "TechFlow Inc",
-    subdomain: "techflow",
-    status: "active",
-    candidates: 892,
-  },
-  {
-    id: 3,
-    name: "Globex Corp",
-    subdomain: "globex",
-    status: "error",
-    candidates: 2105,
-  },
-  {
-    id: 4,
-    name: "NovaPay",
-    subdomain: "novapay",
-    status: "active",
-    candidates: 567,
-  },
-  {
-    id: 5,
-    name: "Vertex Labs",
-    subdomain: "vertex",
-    status: "active",
-    candidates: 3201,
-  },
-  {
-    id: 6,
-    name: "BrightPath HR",
-    subdomain: "brightpath",
-    status: "active",
-    candidates: 445,
-  },
-  {
-    id: 7,
-    name: "CloudNine Inc",
-    subdomain: "cloudnine",
-    status: "error",
-    candidates: 178,
-  },
-  {
-    id: 8,
-    name: "Horizon Labs",
-    subdomain: "horizon",
-    status: "active",
-    candidates: 94,
-  },
-];
+import { createClient } from "@/lib/supabase/client";
 
 export default function WorkspacesPage() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name, slug, created_at, clients(id)");
+
+      if (error) {
+        console.error("Error fetching workspaces:", error);
+        return;
+      }
+
+      if (data) {
+        const mapped = data.map((company: any) => ({
+          id: company.id,
+          name: company.name,
+          subdomain: company.slug, // This is just the raw slug from Supabase
+          candidates: company.clients?.length || 0,
+        }));
+        setWorkspaces(mapped);
+      }
+    };
+
+    fetchWorkspaces();
+  }, [supabase]);
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    setIsDeleting(true);
+
+    const { error } = await supabase
+      .from("companies")
+      .delete()
+      .eq("id", deletingId);
+
+    if (error) {
+      console.error("Error deleting workspace:", error);
+    } else {
+      // Remove the deleted workspace from the UI
+      setWorkspaces((prev) => prev.filter((w) => w.id !== deletingId));
+    }
+
+    setIsDeleting(false);
+    setDeletingId(null);
+  };
 
   const filtered = workspaces.filter((w) => {
-    const matchesSearch =
+    return (
       w.name.toLowerCase().includes(search.toLowerCase()) ||
-      w.subdomain.includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || w.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      (w.subdomain && w.subdomain.toLowerCase().includes(search.toLowerCase()))
+    );
   });
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      {/* Header */}
+    <div className="space-y-6 max-w-7xl relative">
       <div>
         <h1 className="text-xl font-bold text-foreground">Workspaces</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
@@ -99,38 +81,25 @@ export default function WorkspacesPage() {
         </p>
       </div>
 
-      {/* Filters */}
       <div className="bg-card rounded-xl border border-border p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or subdomain..."
+            placeholder="Search by company name or slug..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-44">
-            <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="error">Error</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
               <TableHead className="font-semibold">Company</TableHead>
               <TableHead className="font-semibold">Candidates</TableHead>
-              <TableHead className="w-20"></TableHead>
+              <TableHead className="w-24"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,8 +111,9 @@ export default function WorkspacesPage() {
                 <TableCell>
                   <div>
                     <p className="font-medium text-foreground">{ws.name}</p>
+                    {/* Removed the hardcoded .onboardly.app here */}
                     <p className="text-xs text-muted-foreground">
-                      {ws.subdomain}.onboardly.app
+                      {ws.subdomain || "No slug"}
                     </p>
                   </div>
                 </TableCell>
@@ -156,6 +126,7 @@ export default function WorkspacesPage() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => setDeletingId(ws.id)}
                     className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all h-7 text-xs"
                   >
                     <AlertTriangle className="w-3.5 h-3.5" />
@@ -170,13 +141,46 @@ export default function WorkspacesPage() {
                   colSpan={3}
                   className="text-center py-12 text-muted-foreground"
                 >
-                  No workspaces match your filters.
+                  No workspaces match your search.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deletingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border p-6 rounded-xl shadow-lg max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Delete Workspace?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Are you sure you want to delete this workspace? This action cannot
+              be undone and will permanently erase all associated clients,
+              documents, and data.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingId(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

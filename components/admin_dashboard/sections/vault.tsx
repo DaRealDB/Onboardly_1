@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FileText, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,84 +11,47 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const fileRecords = [
-  {
-    id: 1,
-    fileName: "Offer Letter.pdf",
-    person: "James Rivera",
-    company: "Acme Corp",
-    type: "Offer Letters",
-    dateUploaded: "Apr 28, 2025",
-  },
-  {
-    id: 2,
-    fileName: "I-9 Form.pdf",
-    person: "Priya Sharma",
-    company: "Globex Corp",
-    type: "I-9 Documents",
-    dateUploaded: "Apr 25, 2025",
-  },
-  {
-    id: 3,
-    fileName: "Background Check.pdf",
-    person: "Tom Nakamura",
-    company: "CloudNine Inc",
-    type: "Background Checks",
-    dateUploaded: "Apr 22, 2025",
-  },
-  {
-    id: 4,
-    fileName: "NDA.pdf",
-    person: "Lisa Park",
-    company: "NovaPay",
-    type: "Signed NDAs",
-    dateUploaded: "Apr 20, 2025",
-  },
-  {
-    id: 5,
-    fileName: "Offer Letter.pdf",
-    person: "David Chen",
-    company: "Acme Corp",
-    type: "Offer Letters",
-    dateUploaded: "Apr 18, 2025",
-  },
-  {
-    id: 6,
-    fileName: "I-9 Form.pdf",
-    person: "Maria Santos",
-    company: "Vertex Labs",
-    type: "I-9 Documents",
-    dateUploaded: "Apr 15, 2025",
-  },
-  {
-    id: 7,
-    fileName: "Background Check.pdf",
-    person: "Kevin Wright",
-    company: "TechFlow Inc",
-    type: "Background Checks",
-    dateUploaded: "Apr 12, 2025",
-  },
-  {
-    id: 8,
-    fileName: "NDA.pdf",
-    person: "Aisha Patel",
-    company: "BrightPath HR",
-    type: "Signed NDAs",
-    dateUploaded: "Apr 10, 2025",
-  },
-];
-
-const typeColors: Record<string, string> = {
-  "Offer Letters": "bg-primary/10 text-primary",
-  "I-9 Documents": "bg-success/10 text-success",
-  "Background Checks": "bg-warning/10 text-warning",
-  "Signed NDAs": "bg-chart-2/10 text-chart-2",
-};
+import { createClient } from "@/lib/supabase/client";
 
 export default function VaultPage() {
   const [search, setSearch] = useState("");
-  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
+  const [fileRecords, setFileRecords] = useState<any[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      const { data, error } = await supabase
+        .from("client_documents")
+        .select(
+          `
+          id, 
+          attachment_name, 
+          step_title, 
+          uploaded_at,
+          clients (
+            full_name,
+            companies (name)
+          )
+        `,
+        )
+        .order("uploaded_at", { ascending: false });
+
+      if (data) {
+        const mapped = data.map((doc: any) => ({
+          id: doc.id,
+          fileName: doc.attachment_name,
+          person: doc.clients?.full_name || "Unknown User",
+          company: doc.clients?.companies?.name || "Unknown Company",
+          type: doc.step_title || "Document",
+          dateUploaded: new Date(doc.uploaded_at).toLocaleDateString(),
+        }));
+        setFileRecords(mapped);
+      }
+    };
+
+    fetchDocuments();
+  }, [supabase]);
 
   const filtered = fileRecords.filter(
     (f) =>
@@ -99,13 +62,13 @@ export default function VaultPage() {
         f.type.toLowerCase().includes(search.toLowerCase())),
   );
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     setDeletedIds((prev) => new Set([...prev, id]));
+    await supabase.from("client_documents").delete().eq("id", id);
   };
 
   return (
     <div className="space-y-6 max-w-7xl">
-      {/* Page Heading */}
       <div>
         <h1 className="text-xl font-bold text-foreground">
           Global Document Vault
@@ -115,18 +78,13 @@ export default function VaultPage() {
         </p>
       </div>
 
-      {/* File Records Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">
             File Records
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Browse and manage individual documents across all tenants
-          </p>
         </div>
 
-        {/* Search */}
         <div className="px-5 py-3 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -168,7 +126,7 @@ export default function VaultPage() {
                       </p>
                       <Badge
                         variant="secondary"
-                        className={`text-[10px] font-medium px-1.5 mt-0.5 ${typeColors[file.type] || "bg-muted text-muted-foreground"}`}
+                        className="text-[10px] font-medium px-1.5 mt-0.5 bg-primary/10 text-primary"
                       >
                         {file.type}
                       </Badge>

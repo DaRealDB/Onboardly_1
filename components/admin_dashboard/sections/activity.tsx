@@ -5,199 +5,201 @@ import {
   Users,
   Building2,
   FileCheck,
-  Radio,
+  Bell,
 } from "lucide-react";
 import KpiCard from "../kpi-card";
 import LiveFeedItem from "../live-feed-item";
 import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/client";
 
-const initialEvents = [
-  {
-    id: 1,
-    type: "tenant",
-    message: "New tenant 'Acme Corp' signed up — auto-provisioning workspace.",
-    time: "2 min ago",
-  },
-  {
-    id: 2,
-    type: "milestone",
-    message: "Platform-wide: 10,000th hire completed! 🎉",
-    time: "8 min ago",
-  },
-  {
-    id: 3,
-    type: "hire",
-    message:
-      "Sarah Chen accepted offer at TechFlow Inc. Pipeline stage → Onboarding.",
-    time: "15 min ago",
-  },
-  {
-    id: 4,
-    type: "document",
-    message:
-      "Bulk I-9 verification completed for Globex Corp — 47 documents processed.",
-    time: "22 min ago",
-  },
-  {
-    id: 5,
-    type: "alert",
-    message: "High latency detected on subdomain routing for NovaPay tenant.",
-    time: "31 min ago",
-  },
-  {
-    id: 6,
-    type: "hire",
-    message:
-      "Marcus Johnson completed onboarding at Vertex Labs — all tasks signed off.",
-    time: "45 min ago",
-  },
-  {
-    id: 7,
-    type: "system",
-    message:
-      "Scheduled maintenance window: Vault storage rebalancing completed.",
-    time: "1 hr ago",
-  },
-  {
-    id: 8,
-    type: "tenant",
-    message: "Workspace 'BrightPath HR' upgraded to Enterprise tier.",
-    time: "1.5 hrs ago",
-  },
-  {
-    id: 9,
-    type: "document",
-    message:
-      "Digital signature batch processed — 120 offer letters signed across 8 tenants.",
-    time: "2 hrs ago",
-  },
-  {
-    id: 10,
-    type: "hire",
-    message: "Emily Rodriguez started Day 1 onboarding at CloudNine Inc.",
-    time: "2.5 hrs ago",
-  },
-];
+// Format functions
+function getTimeAgo(dateString: string) {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
-const newEvents = [
-  {
-    type: "hire",
-    message: "Alex Kim completed background check at DataWave Corp.",
-    time: "Just now",
-  },
-  {
-    type: "tenant",
-    message: "New tenant 'Horizon Labs' provisioned — subdomain active.",
-    time: "Just now",
-  },
-  {
-    type: "document",
-    message: "NDA batch signed — 23 documents for QuantumHR.",
-    time: "Just now",
-  },
-];
+  if (diffInSeconds < 60) return "Just now";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  return `${Math.floor(diffInSeconds / 86400)}d ago`;
+}
 
 export default function ActivityPage() {
-  const [events, setEvents] = useState(initialEvents);
-  const [isLive, setIsLive] = useState(true);
+  const supabase = createClient();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    tenants: 0,
+    candidates: 0,
+    completed: 0,
+    documents: 0,
+  });
 
+  // Fetch functions
   useEffect(() => {
-    if (!isLive) return;
-    const interval = setInterval(() => {
-      const randomEvent =
-        newEvents[Math.floor(Math.random() * newEvents.length)];
-      setEvents((prev) => [
-        {
-          ...randomEvent,
-          id: Date.now(),
-          time: "Just now",
-        },
-        ...prev.slice(0, 14),
-      ]);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [isLive]);
+    const fetchData = async () => {
+      const { count: tenantsCount } = await supabase
+        .from("companies")
+        .select("*", { count: "exact", head: true });
 
+      const { count: candidatesCount } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true });
+
+      const { count: completedCount } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .not("hired_at", "is", null);
+
+      const { count: docsCount } = await supabase
+        .from("client_documents")
+        .select("*", { count: "exact", head: true });
+
+      setStats({
+        tenants: tenantsCount || 0,
+        candidates: candidatesCount || 0,
+        completed: completedCount || 0,
+        documents: docsCount || 0,
+      });
+
+      const { data: notifsData, error } = await supabase
+        .from("admin_notifications")
+        .select("id, title, message, type, created_at")
+        .order("created_at", { ascending: false })
+        .limit(25);
+
+      if (error) console.error("Error fetching admin notifications:", error);
+
+      if (notifsData) {
+        const mappedNotifs = notifsData.map((n: any) => ({
+          id: n.id,
+          type: n.type || "system",
+          message: `${n.title} — ${n.message}`,
+          time: getTimeAgo(n.created_at),
+        }));
+        setNotifications(mappedNotifs);
+      }
+    };
+
+    fetchData();
+
+    // Real-time subscriptions targeting the new admin table
+    const channel = supabase
+      .channel("admin-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "admin_notifications",
+        },
+        (payload) => {
+          const newAlert = {
+            id: payload.new.id,
+            type: payload.new.type || "system",
+            message: `${payload.new.title} — ${payload.new.message}`,
+            time: "Just now",
+          };
+
+          setNotifications((prev) => [newAlert, ...prev].slice(0, 25));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  // View
   return (
     <div className="space-y-6 max-w-7xl">
-      {/* Page Heading */}
+      {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-foreground">
+        <h1 className="text-2xl font-bold text-foreground">
           Activity Dashboard
         </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <p className="text-sm text-muted-foreground mt-1">
           Real-time platform events across all tenants and workspaces
         </p>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          title="Active Tenants"
-          value="142"
-          change={12}
-          changeLabel="vs. last month"
-          icon={Building2}
-        />
-        <KpiCard
-          title="Total Candidates"
-          value="28,491"
-          change={8.3}
-          changeLabel="vs. last month"
-          icon={Users}
-        />
-        <KpiCard
-          title="Hires This Week"
-          value="347"
-          change={-2.1}
-          changeLabel="vs. last week"
-          icon={ActivityIcon}
-        />
-        <KpiCard
-          title="Documents Signed"
-          value="1,204"
-          change={15.7}
-          changeLabel="vs. last month"
-          icon={FileCheck}
-        />
+      {/* KPI Section */}
+      <div className="pt-4">
+        <h2 className="text-lg font-semibold text-foreground mb-4 border-b border-border pb-2">
+          Platform-Wide Statistics
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            title="Active Workspaces"
+            value={stats.tenants.toString()}
+            change={0}
+            changeLabel="vs. last month"
+            icon={Building2}
+          />
+          <KpiCard
+            title="Total Candidates"
+            value={stats.candidates.toString()}
+            change={0}
+            changeLabel="vs. last month"
+            icon={Users}
+          />
+          <KpiCard
+            title="Completed Onboardings"
+            value={stats.completed.toString()}
+            change={0}
+            changeLabel="vs. last week"
+            icon={ActivityIcon}
+          />
+          <KpiCard
+            title="Documents Uploaded"
+            value={stats.documents.toString()}
+            change={0}
+            changeLabel="vs. last month"
+            icon={FileCheck}
+          />
+        </div>
       </div>
 
-      {/* Live Feed */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      {/* Global Notifications Feed */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden mt-6">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <h2 className="text-base font-semibold text-foreground">
-              Live Feed
+              Global Notifications
             </h2>
             <Badge
               variant="secondary"
-              className={`gap-1.5 text-[11px] cursor-pointer ${isLive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}
-              onClick={() => setIsLive(!isLive)}
+              className="gap-1.5 text-[11px] bg-primary/10 text-primary"
             >
-              <Radio
-                className={`w-3 h-3 ${isLive ? "animate-pulse-dot" : ""}`}
-              />
-              {isLive ? "Live" : "Paused"}
+              <Bell className="w-3 h-3 animate-pulse" />
+              Live
             </Badge>
           </div>
           <span className="text-xs text-muted-foreground">
-            {events.length} events
+            {notifications.length} alerts
           </span>
         </div>
+
         <div className="divide-y divide-border/50 max-h-[520px] overflow-y-auto">
-          <AnimatePresence initial={false}>
-            {events.map((event) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <LiveFeedItem event={event} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              Listening for new events across the platform...
+            </div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {notifications.map((notif) => (
+                <motion.div
+                  key={notif.id}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <LiveFeedItem event={notif} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
         </div>
       </div>
     </div>
