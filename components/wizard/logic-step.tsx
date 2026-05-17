@@ -165,8 +165,13 @@ export function LogicStep() {
       router.push("/tenantdashboard");
       router.refresh();
     } catch (err: any) {
-      toast.error("Launch failed", { description: err.message });
-      console.error("Supabase Error:", err);
+      // FIX: Force Supabase to stringify the error so it doesn't just show {}
+      const errorMessage = err?.message || err?.details || JSON.stringify(err);
+      toast.error("Launch failed", { description: errorMessage });
+      console.error(
+        "Supabase Error Full Details:",
+        JSON.stringify(err, null, 2),
+      );
     } finally {
       setIsLoading(false);
     }

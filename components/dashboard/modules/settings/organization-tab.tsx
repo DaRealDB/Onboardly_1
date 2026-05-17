@@ -29,11 +29,9 @@ export function OrganizationTab() {
   const [saved, setSaved] = useState(false);
 
   // Sync
-  // Sync
   useEffect(() => {
     if (tenant) {
       setName(tenant.name || "");
-      // Cleans up the old ".com" if it was saved in the database previously!
       const cleanSlug = (tenant.slug || "").replace(/\.com$/, "");
       setSlug(cleanSlug);
     }
@@ -43,18 +41,14 @@ export function OrganizationTab() {
   const handleNameChange = (newName: string) => {
     setName(newName);
 
+    // Auto-generates the matching slug cleanly without manual edits
     const generatedSlug = newName
-      .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-");
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
 
     setSlug(generatedSlug);
-  };
-
-  const handleSlugChange = (newSlug: string) => {
-    const formattedSlug = newSlug.toLowerCase().replace(/[^a-z0-9-]/g, "");
-    setSlug(formattedSlug);
   };
 
   const handleSave = async () => {
@@ -109,6 +103,7 @@ export function OrganizationTab() {
           Manage your organization settings and public workspace identity
         </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
@@ -123,28 +118,19 @@ export function OrganizationTab() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slugInput">Workspace Domain</Label>
-            <div className="relative flex h-10 w-full items-center overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-              <div className="grid w-full">
-                {/* Ghost layer that sizes perfectly to position the .com snug at the end */}
-                <div className="col-start-1 row-start-1 flex items-center pointer-events-none whitespace-pre">
-                  <span className="invisible">{slug || "acme-corp"}</span>
-                  <span className="text-foreground font-medium">.com</span>
-                </div>
-                {/* Interactive input layer placed directly on top */}
-                <input
-                  id="slugInput"
-                  type="text"
-                  value={slug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="acme-corp"
-                  className="col-start-1 row-start-1 bg-transparent w-full focus:outline-none text-foreground placeholder:text-muted-foreground z-10"
-                />
-              </div>
+            <Label>Workspace Domain</Label>
+            {/* Non-editable read-only display box to fix unclickable grid bugs */}
+            <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted/30 px-3 py-2 text-sm cursor-not-allowed overflow-hidden">
+              <span className="text-foreground font-medium truncate">
+                {slug || "acme-corp"}
+              </span>
+              <span className="text-muted-foreground whitespace-nowrap">
+                .com
+              </span>
             </div>
             <p className="text-[13px] text-muted-foreground">
-              This is your unique portal domain. Letters, numbers, and hyphens
-              only.
+              This is your unique portal domain auto-generated from your company
+              name.
             </p>
           </div>
         </div>
