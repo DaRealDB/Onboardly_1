@@ -1,6 +1,6 @@
 // Imports
 "use client";
-
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -114,7 +114,6 @@ export function PeopleModule() {
   const supabase = createClient();
   const { toast } = useToast();
 
-  const [companyId, setCompanyId] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [tracks, setTracks] = useState<{ id: string; name: string }[]>([]);
   const [snippets, setSnippets] = useState<
@@ -135,7 +134,8 @@ export function PeopleModule() {
     useState<ClientRecord | null>(null);
   const [finalizeHireDialog, setFinalizeHireDialog] =
     useState<ClientRecord | null>(null);
-
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyDomain, setCompanyDomain] = useState<string>(""); // New state
   // Init Data
   useEffect(() => {
     const initData = async () => {
@@ -151,25 +151,37 @@ export function PeopleModule() {
       if (teamData) {
         setCompanyId(teamData.company_id);
 
-        const [clientsRes, tracksRes, snippetsRes] = await Promise.all([
-          supabase
-            .from("clients")
-            .select("*")
-            .eq("company_id", teamData.company_id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("workflow_tracks")
-            .select("id, name")
-            .eq("company_id", teamData.company_id),
-          supabase
-            .from("document_snippets")
-            .select("id, title, items")
-            .eq("company_id", teamData.company_id),
-        ]);
+        // Fetch company data alongside the rest
+        const [clientsRes, tracksRes, snippetsRes, companyRes] =
+          await Promise.all([
+            supabase
+              .from("clients")
+              .select("*")
+              .eq("company_id", teamData.company_id)
+              .order("created_at", { ascending: false }),
+            supabase
+              .from("workflow_tracks")
+              .select("id, name")
+              .eq("company_id", teamData.company_id),
+            supabase
+              .from("document_snippets")
+              .select("id, title, items")
+              .eq("company_id", teamData.company_id),
+            supabase
+              .from("companies")
+              .select("slug")
+              .eq("id", teamData.company_id)
+              .single(),
+          ]);
 
         if (clientsRes.data) setClients(clientsRes.data);
         if (tracksRes.data) setTracks(tracksRes.data);
         if (snippetsRes.data) setSnippets(snippetsRes.data);
+
+        if (companyRes.data) {
+          const slug = companyRes.data.slug;
+          setCompanyDomain(slug.includes(".") ? slug : `${slug}.com`);
+        }
       }
       setIsLoading(false);
     };
@@ -374,13 +386,20 @@ export function PeopleModule() {
           </DialogTrigger>
           <AddClientDialog
             companyId={companyId!}
+            companyDomain={companyDomain} // <-- Pass this down
             tracks={tracks}
             onSuccess={(newClient) => {
               setClients([newClient, ...clients]);
               setAddClientDialogOpen(false);
               toast({
-                title: "Client Added",
-                description: `${newClient.full_name} has been added and is pending onboarding`,
+                title:
+                  newClient.status === "hired"
+                    ? "Client Hired"
+                    : "Client Added",
+                description:
+                  newClient.status === "hired"
+                    ? `${newClient.full_name} has been hired instantly.`
+                    : `${newClient.full_name} has been added and is pending onboarding`,
               });
             }}
           />
@@ -1173,7 +1192,7 @@ function ClientList({
         <TableHeader>
           <TableRow>
             <TableHead>Client</TableHead>
-            <TableHead>Contact</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -1283,12 +1302,17 @@ function ClientList({
   );
 }
 
+// Modal
+// Modal
+// Modal
 function AddClientDialog({
   companyId,
+  companyDomain,
   tracks,
   onSuccess,
 }: {
   companyId: string;
+  companyDomain: string;
   tracks: { id: string; name: string }[];
   onSuccess: (client: ClientRecord) => void;
 }) {
@@ -1298,16 +1322,25 @@ function AddClientDialog({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedTrack, setSelectedTrack] = useState("");
+  const [isInstantHire, setIsInstantHire] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Handlers
   const handleSave = async () => {
     if (!fullName.trim() || !email.trim()) return;
+    if (!isInstantHire && !selectedTrack) return; // Requires track if not instant hire
+
     setIsSubmitting(true);
+
+    // Strictly uses their company name domain (e.g. @acme.com)
+    const finalEmail = email.includes("@")
+      ? email
+      : `${email}@${companyDomain}`;
 
     const password =
       Math.random().toString(36).slice(-8) +
       Math.random().toString(36).slice(-8);
-    const username = email;
+    const username = finalEmail;
 
     const { data, error } = await supabase
       .from("clients")
@@ -1315,9 +1348,10 @@ function AddClientDialog({
         {
           company_id: companyId,
           full_name: fullName,
-          email: email,
-          status: "pending",
-          assigned_track_id: selectedTrack || null,
+          email: finalEmail,
+          status: isInstantHire ? "hired" : "pending",
+          hired_at: isInstantHire ? new Date().toISOString() : null,
+          assigned_track_id: !isInstantHire ? selectedTrack || null : null,
           temp_username: username,
           temp_password: password,
           requested_documents: [],
@@ -1340,9 +1374,11 @@ function AddClientDialog({
     setFullName("");
     setEmail("");
     setSelectedTrack("");
+    setIsInstantHire(false);
     onSuccess(data);
   };
 
+  // View
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
@@ -1359,55 +1395,86 @@ function AddClientDialog({
             onChange={(e) => setFullName(e.target.value)}
           />
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="john@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+          <div className="relative">
+            <Input
+              id="email"
+              type="text"
+              placeholder="john"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            {/* The text overlay for @companyname.com */}
+            {companyDomain && !email.includes("@") && email.length > 0 && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-foreground font-medium pointer-events-none">
+                @{companyDomain}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 pt-2">
+          <Checkbox
+            id="instantHire"
+            checked={isInstantHire}
+            onCheckedChange={(checked) => setIsInstantHire(checked as boolean)}
           />
-        </div>
-        <div className="space-y-2">
-          <Label>Assign Track</Label>
-          <Select
-            value={selectedTrack}
-            onValueChange={setSelectedTrack}
-            disabled={tracks.length === 0}
+          <Label
+            htmlFor="instantHire"
+            className="font-normal cursor-pointer text-sm"
           >
-            <SelectTrigger>
-              <SelectValue
-                placeholder={
-                  tracks.length > 0
-                    ? "Select an onboarding track..."
-                    : "No tracks available"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {tracks.length === 0 ? (
-                <p className="p-4 text-xs text-center text-muted-foreground italic">
-                  No tracks found. Create one in the Workflow Engine first.
-                </p>
-              ) : (
-                tracks.map((track) => (
-                  <SelectItem key={track.id} value={track.id}>
-                    {track.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+            Skip onboarding track and hire instantly
+          </Label>
         </div>
+
+        {!isInstantHire && (
+          <div className="space-y-2">
+            <Label>Assign Track</Label>
+            <Select
+              value={selectedTrack}
+              onValueChange={setSelectedTrack}
+              disabled={tracks.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    tracks.length > 0
+                      ? "Select an onboarding track..."
+                      : "No tracks available"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {tracks.length === 0 ? (
+                  <p className="p-4 text-xs text-center text-muted-foreground italic">
+                    No tracks found. Create one in the Workflow Engine first.
+                  </p>
+                ) : (
+                  tracks.map((track) => (
+                    <SelectItem key={track.id} value={track.id}>
+                      {track.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
       <DialogFooter>
         <Button
           onClick={handleSave}
-          disabled={!fullName.trim() || !email.trim() || isSubmitting}
+          disabled={
+            !fullName.trim() ||
+            !email.trim() ||
+            isSubmitting ||
+            (!isInstantHire && !selectedTrack)
+          }
         >
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Add to Onboarding
+          {isInstantHire ? "Hire Instantly" : "Add to Onboarding"}
         </Button>
       </DialogFooter>
     </DialogContent>
