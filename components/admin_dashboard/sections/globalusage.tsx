@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   UserCheck,
@@ -6,6 +6,7 @@ import {
   Clock,
   RotateCcw,
   Search,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,97 +21,121 @@ import {
   Tooltip as RTooltip,
 } from "recharts";
 import KpiCard from "../kpi-card";
+import { createClient } from "@/lib/supabase/client";
 
+// Placeholder data for chart until monthly tracking is added to DB
 const chartData = [
-  { month: "Sep", candidates: 2100 },
-  { month: "Oct", candidates: 2800 },
-  { month: "Nov", candidates: 3200 },
-  { month: "Dec", candidates: 2900 },
-  { month: "Jan", candidates: 3800 },
-  { month: "Feb", candidates: 4200 },
-  { month: "Mar", candidates: 4600 },
-  { month: "Apr", candidates: 5100 },
-];
-
-const allStuckCandidates = [
-  {
-    id: 1,
-    name: "James Rivera",
-    tenant: "Acme Corp",
-    stage: "Background Check",
-    days: 14,
-  },
-  {
-    id: 2,
-    name: "Priya Sharma",
-    tenant: "Globex Corp",
-    stage: "Document Signing",
-    days: 9,
-  },
-  {
-    id: 3,
-    name: "Tom Nakamura",
-    tenant: "CloudNine Inc",
-    stage: "IT Provisioning",
-    days: 7,
-  },
-  {
-    id: 4,
-    name: "Lisa Park",
-    tenant: "NovaPay",
-    stage: "Offer Review",
-    days: 5,
-  },
-  {
-    id: 5,
-    name: "David Chen",
-    tenant: "Acme Corp",
-    stage: "I-9 Verification",
-    days: 11,
-  },
-  {
-    id: 6,
-    name: "Maria Santos",
-    tenant: "Vertex Labs",
-    stage: "Equipment Setup",
-    days: 6,
-  },
-  {
-    id: 7,
-    name: "Kevin Wright",
-    tenant: "TechFlow Inc",
-    stage: "Background Check",
-    days: 8,
-  },
-  {
-    id: 8,
-    name: "Aisha Patel",
-    tenant: "BrightPath HR",
-    stage: "Document Signing",
-    days: 5,
-  },
+  { month: "Sep", candidates: 120 },
+  { month: "Oct", candidates: 180 },
+  { month: "Nov", candidates: 200 },
 ];
 
 export default function GlobalUsagePage() {
   const [search, setSearch] = useState("");
-  const [resetStates, setResetStates] = useState<Record<number, string>>({});
+  const [resetStates, setResetStates] = useState<Record<string, string>>({});
+  const [stuckCandidates, setStuckCandidates] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    workspaces: 0,
+    total: 0,
+    pending: 0,
+    docs: 0,
+  });
 
-  const filtered = allStuckCandidates.filter(
+  // Modal state
+  const [confirmResetId, setConfirmResetId] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // KPIs
+      const { count: workspaces } = await supabase
+        .from("companies")
+        .select("*", { count: "exact", head: true });
+      const { count: total } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true });
+      const { count: pending } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+      const { count: docs } = await supabase
+        .from("client_documents")
+        .select("*", { count: "exact", head: true });
+
+      setStats({
+        workspaces: workspaces || 0,
+        total: total || 0,
+        pending: pending || 0,
+        docs: docs || 0,
+      });
+
+      // Candidates stuck for >= 2 days
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, full_name, status, created_at, companies(name)")
+        .eq("status", "pending")
+        .lte("created_at", twoDaysAgo.toISOString()) // Strict filter for 2+ days
+        .order("created_at", { ascending: true })
+        .limit(20);
+
+      if (error) {
+        console.error("Error fetching stuck candidates:", error);
+      }
+
+      if (data) {
+        const mapped = data.map((c: any) => {
+          const created = new Date(c.created_at);
+          const days = Math.floor(
+            (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          return {
+            id: c.id,
+            name: c.full_name,
+            tenant: c.companies?.name || "Unknown Tenant",
+            stage: "Pending Actions",
+            days: days > 0 ? days : 1,
+          };
+        });
+        setStuckCandidates(mapped);
+      }
+    };
+    fetchData();
+  }, [supabase]);
+
+  const filtered = stuckCandidates.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.tenant.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleReset = (id: number) => {
-    setResetStates((prev) => ({ ...prev, [id]: "resetting" }));
-    setTimeout(() => {
-      setResetStates((prev) => ({ ...prev, [id]: "done" }));
-    }, 1500);
+  const executeReset = async () => {
+    if (!confirmResetId) return;
+    setIsResetting(true);
+
+    // Delete all uploaded documents for this specific client
+    const { error } = await supabase
+      .from("client_documents")
+      .delete()
+      .eq("client_id", confirmResetId);
+
+    if (error) {
+      console.error("Error resetting documents:", error);
+    } else {
+      // Mark as done visually
+      setResetStates((prev) => ({ ...prev, [confirmResetId]: "done" }));
+    }
+
+    setIsResetting(false);
+    setConfirmResetId(null);
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      {/* Page Heading */}
+    <div className="space-y-6 max-w-7xl relative">
       <div>
         <h1 className="text-xl font-bold text-foreground">
           Global Usage Metrics
@@ -121,52 +146,47 @@ export default function GlobalUsagePage() {
         </p>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Active Workspaces"
-          value="28,491"
-          change={8.3}
+          value={stats.workspaces.toString()}
+          change={0}
           changeLabel="vs. last month"
           icon={Users}
           accentClass="bg-primary"
         />
         <KpiCard
           title="Total Candidates"
-          value="19,847"
-          change={12.1}
+          value={stats.total.toString()}
+          change={0}
           changeLabel="vs. last month"
           icon={UserCheck}
         />
         <KpiCard
           title="Pending Onboardings"
-          value="234"
-          change={-18.4}
+          value={stats.pending.toString()}
+          change={0}
           changeLabel="vs. last month"
           icon={Clock}
         />
         <KpiCard
           title="Documents Processed"
-          value="1,410"
-          change={-5.2}
+          value={stats.docs.toString()}
+          change={0}
           changeLabel="vs. last month"
           icon={UserX}
         />
       </div>
 
-      {/* Chart */}
       <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-base font-semibold text-foreground">
               Candidate Volume Trend
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Monthly candidate intake across all tenants
-            </p>
           </div>
           <Badge variant="secondary" className="text-xs">
-            Last 8 months
+            Historical
           </Badge>
         </div>
         <div className="h-64">
@@ -210,7 +230,6 @@ export default function GlobalUsagePage() {
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
                   fontSize: "12px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 }}
               />
               <Area
@@ -225,18 +244,13 @@ export default function GlobalUsagePage() {
         </div>
       </div>
 
-      {/* Individual Stuck Candidates */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">
-            Individual Stuck Candidates
+            Stuck Candidates Overview (2+ Days)
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Candidates idle for 5+ days — apply targeted Force Reset per record
-          </p>
         </div>
 
-        {/* Search */}
         <div className="px-5 py-3 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -249,11 +263,10 @@ export default function GlobalUsagePage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="divide-y divide-border">
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              No candidates match your search or filter.
+              No pending candidates stuck for more than 2 days.
             </div>
           ) : (
             filtered.map((c) => {
@@ -282,22 +295,16 @@ export default function GlobalUsagePage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={state === "resetting" || state === "done"}
-                      onClick={() => handleReset(c.id)}
+                      disabled={state === "done"}
+                      onClick={() => setConfirmResetId(c.id)}
                       className={`gap-1.5 h-7 text-xs min-w-[100px] transition-all ${
                         state === "done"
-                          ? "border-success/30 text-success bg-success/5"
+                          ? "border-success/30 text-success bg-success/5 hover:bg-success/5 hover:text-success"
                           : "hover:border-primary/50 hover:text-primary hover:bg-primary/5"
                       }`}
                     >
-                      <RotateCcw
-                        className={`w-3 h-3 ${state === "resetting" ? "animate-spin" : ""}`}
-                      />
-                      {state === "resetting"
-                        ? "Resetting…"
-                        : state === "done"
-                          ? "Reset ✓"
-                          : "Force Reset"}
+                      <RotateCcw className="w-3 h-3" />
+                      {state === "done" ? "Reset ✓" : "Force Reset"}
                     </Button>
                   </div>
                 </div>
@@ -305,13 +312,40 @@ export default function GlobalUsagePage() {
             })
           )}
         </div>
-
-        <div className="px-5 py-3 border-t border-border bg-muted/20">
-          <p className="text-xs text-muted-foreground">
-            {filtered.length} of {allStuckCandidates.length} candidates shown
-          </p>
-        </div>
       </div>
+
+      {/* Force Reset Confirmation Modal */}
+      {confirmResetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border p-6 rounded-xl shadow-lg max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Reset Candidate Documents?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Are you sure you want to force reset this candidate? This will
+              permanently delete any documents they have uploaded and revert
+              their progress.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmResetId(null)}
+                disabled={isResetting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={executeReset}
+                disabled={isResetting}
+              >
+                {isResetting ? "Resetting..." : "Yes, Reset Documents"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

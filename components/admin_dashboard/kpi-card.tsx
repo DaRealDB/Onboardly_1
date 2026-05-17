@@ -1,5 +1,5 @@
 import React, { ElementType } from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface KpiCardProps {
   title: string;
@@ -18,7 +18,21 @@ export default function KpiCard({
   icon: Icon,
   accentClass,
 }: KpiCardProps) {
-  const isPositive = change >= 0;
+  const isPositive = change > 0;
+  const isNegative = change < 0;
+  const isNeutral = change === 0;
+
+  // Determine the styling and icon based on the change value
+  let badgeClasses = "bg-muted text-muted-foreground"; // Default to Neutral (Gray)
+  let TrendIcon = Minus;
+
+  if (isPositive) {
+    badgeClasses = "bg-success/10 text-success";
+    TrendIcon = TrendingUp;
+  } else if (isNegative) {
+    badgeClasses = "bg-destructive/10 text-destructive";
+    TrendIcon = TrendingDown;
+  }
 
   return (
     <div className="bg-card rounded-xl border border-border p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
@@ -31,22 +45,23 @@ export default function KpiCard({
           />
         </div>
         <div
-          className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
+          className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${badgeClasses}`}
         >
-          {isPositive ? (
-            <TrendingUp className="w-3 h-3" />
-          ) : (
-            <TrendingDown className="w-3 h-3" />
-          )}
+          <TrendIcon className="w-3 h-3" />
           {Math.abs(change)}%
         </div>
       </div>
+
+      <h3 className="text-sm font-medium text-muted-foreground mb-1">
+        {title}
+      </h3>
       <p className="text-2xl font-bold text-foreground tracking-tight">
         {value}
       </p>
-      <p className="text-xs text-muted-foreground mt-1">
-        {changeLabel || title}
-      </p>
+
+      {changeLabel && (
+        <p className="text-xs text-muted-foreground mt-1">{changeLabel}</p>
+      )}
     </div>
   );
 }

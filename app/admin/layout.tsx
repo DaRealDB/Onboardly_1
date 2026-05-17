@@ -1,8 +1,9 @@
 "use client";
 
+// Header
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Moon, Sun, Bell, ChevronRight, LogOut } from "lucide-react";
+import { Moon, Sun, ChevronRight, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Sidebar from "@/components/admin_dashboard/sidebar";
 
-// Routing configurations
 const pageTitles: Record<string, { title: string; breadcrumb: string }> = {
   "/admin": { title: "Activity", breadcrumb: "Live Feed & Overview" },
   "/admin/workspaces": { title: "Workspaces", breadcrumb: "Tenant Management" },
@@ -26,7 +26,6 @@ const pageTitles: Record<string, { title: string; breadcrumb: string }> = {
   "/admin/vault": { title: "Vault", breadcrumb: "Storage & Signatures" },
 };
 
-// Header
 function Header() {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
@@ -34,14 +33,10 @@ function Header() {
   const supabase = createClient();
   const page = pageTitles[pathname] || { title: "Dashboard", breadcrumb: "" };
 
-  // Hydration Fix State
   const [mounted, setMounted] = useState(false);
-
-  // Admin Data State
   const [adminName, setAdminName] = useState("Loading...");
   const [adminEmail, setAdminEmail] = useState("");
 
-  // Fetch admin data
   useEffect(() => {
     setMounted(true);
 
@@ -70,7 +65,6 @@ function Header() {
     fetchAdminData();
   }, [supabase]);
 
-  // Handle Sign Out
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
@@ -97,11 +91,6 @@ function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="relative w-9 h-9 rounded-lg flex items-center justify-center text-red-500 hover:text-blue-600 hover:bg-blue-50 dark:text-red-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 animate-pulse-dot" />
-        </button>
-
         <button
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
           className="w-9 h-9 rounded-lg flex items-center justify-center text-red-500 hover:text-blue-600 hover:bg-blue-50 dark:text-red-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
