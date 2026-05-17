@@ -34,17 +34,17 @@ function Header() {
   const supabase = createClient();
   const page = pageTitles[pathname] || { title: "Dashboard", breadcrumb: "" };
 
-  // 1. Hydration Fix State
+  // Hydration Fix State
   const [mounted, setMounted] = useState(false);
 
-  // 2. Admin Data State
+  // Admin Data State
   const [adminName, setAdminName] = useState("Loading...");
   const [adminEmail, setAdminEmail] = useState("");
 
+  // Fetch admin data
   useEffect(() => {
-    setMounted(true); // Tells component it's safe to render theme icons
+    setMounted(true);
 
-    // Fetch Admin Data
     const fetchAdminData = async () => {
       const {
         data: { user },
@@ -73,33 +73,38 @@ function Header() {
   // Handle Sign Out
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/auth/login"); // Adjust this to your login route if needed
+    router.push("/auth/login");
   };
 
   return (
-    <header className="h-16 bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-30 flex items-center justify-between px-6">
+    <header className="h-16 bg-red-50/90 dark:bg-[#1a0f0f]/90 backdrop-blur-md border-b border-red-200 dark:border-red-900 sticky top-0 z-30 flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Super Admin</span>
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-        <span className="font-medium text-foreground">{page.title}</span>
+        <span className="font-semibold text-red-600 dark:text-red-500">
+          Super Admin
+        </span>
+        <ChevronRight className="w-3.5 h-3.5 text-blue-400 dark:text-blue-600" />
+        <span className="font-medium text-slate-900 dark:text-slate-100">
+          {page.title}
+        </span>
         {page.breadcrumb && (
           <>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-            <span className="text-muted-foreground">{page.breadcrumb}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-blue-400 dark:text-blue-600" />
+            <span className="text-slate-500 dark:text-slate-400">
+              {page.breadcrumb}
+            </span>
           </>
         )}
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="relative w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+        <button className="relative w-9 h-9 rounded-lg flex items-center justify-center text-red-500 hover:text-blue-600 hover:bg-blue-50 dark:text-red-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors">
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary animate-pulse-dot" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 animate-pulse-dot" />
         </button>
 
-        {/* Hydration fix: Only render icons after mount */}
         <button
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-red-500 hover:text-blue-600 hover:bg-blue-50 dark:text-red-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
         >
           {mounted ? (
             theme === "light" ? (
@@ -108,23 +113,23 @@ function Header() {
               <Sun className="w-4 h-4" />
             )
           ) : (
-            <div className="w-4 h-4" /> /* Invisible placeholder during SSR */
+            <div className="w-4 h-4" />
           )}
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2.5 ml-2 pl-2 border-l border-border outline-none">
+            <button className="flex items-center gap-2.5 ml-2 pl-2 border-l border-red-200 dark:border-red-900 outline-none group">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-foreground leading-none">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-none group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {adminName}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
+                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5 truncate max-w-[120px]">
                   {adminEmail || "Super Admin"}
                 </p>
               </div>
-              <Avatar className="w-8 h-8 border-2 border-primary/20">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+              <Avatar className="w-8 h-8 border-2 border-blue-500/30">
+                <AvatarFallback className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs font-bold">
                   {adminName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -135,7 +140,7 @@ function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleSignOut}
-              className="text-destructive cursor-pointer"
+              className="text-red-600 dark:text-red-500 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/50 focus:text-red-700 dark:focus:text-red-400"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
@@ -156,7 +161,7 @@ export default function AdminLayout({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-red-50/40 dark:bg-[#0f0505]">
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed(!collapsed)}

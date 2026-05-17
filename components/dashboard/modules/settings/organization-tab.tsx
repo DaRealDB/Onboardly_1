@@ -29,10 +29,13 @@ export function OrganizationTab() {
   const [saved, setSaved] = useState(false);
 
   // Sync
+  // Sync
   useEffect(() => {
     if (tenant) {
       setName(tenant.name || "");
-      setSlug(tenant.slug || "");
+      // Cleans up the old ".com" if it was saved in the database previously!
+      const cleanSlug = (tenant.slug || "").replace(/\.com$/, "");
+      setSlug(cleanSlug);
     }
   }, [tenant]);
 
@@ -77,7 +80,7 @@ export function OrganizationTab() {
       toast({
         title: "Update Failed",
         description: error.message.includes("unique constraint")
-          ? "This workspace slug is already taken. Please choose another."
+          ? "This workspace domain is already taken. Please choose another."
           : error.message,
         variant: "destructive",
       });
@@ -120,22 +123,27 @@ export function OrganizationTab() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slugInput">Workspace Slug</Label>
-            <div className="flex items-center overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-              <span className="flex h-10 items-center border-r bg-muted px-3 text-sm text-muted-foreground select-none">
-                onboardly.app/
-              </span>
-              <input
-                id="slugInput"
-                type="text"
-                value={slug}
-                onChange={(e) => handleSlugChange(e.target.value)}
-                placeholder="acme-corp"
-                className="flex h-10 w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              />
+            <Label htmlFor="slugInput">Workspace Domain</Label>
+            <div className="relative flex h-10 w-full items-center overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <div className="grid w-full">
+                {/* Ghost layer that sizes perfectly to position the .com snug at the end */}
+                <div className="col-start-1 row-start-1 flex items-center pointer-events-none whitespace-pre">
+                  <span className="invisible">{slug || "acme-corp"}</span>
+                  <span className="text-foreground font-medium">.com</span>
+                </div>
+                {/* Interactive input layer placed directly on top */}
+                <input
+                  id="slugInput"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => handleSlugChange(e.target.value)}
+                  placeholder="acme-corp"
+                  className="col-start-1 row-start-1 bg-transparent w-full focus:outline-none text-foreground placeholder:text-muted-foreground z-10"
+                />
+              </div>
             </div>
             <p className="text-[13px] text-muted-foreground">
-              This is your unique portal URL. Letters, numbers, and hyphens
+              This is your unique portal domain. Letters, numbers, and hyphens
               only.
             </p>
           </div>

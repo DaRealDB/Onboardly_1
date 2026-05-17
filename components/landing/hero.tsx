@@ -79,7 +79,7 @@ export default function Hero() {
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               >
                 <Link
-                  href="/auth/signup"
+                  href="/auth/login?mode=signup"
                   className="inline-flex items-center gap-2 bg-[#2563EB] text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-[#1D4ED8] hover:shadow-lg transition-all duration-200"
                 >
                   Start Now <ArrowRight className="w-4 h-4" />

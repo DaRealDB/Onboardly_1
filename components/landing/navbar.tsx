@@ -107,7 +107,7 @@ export default function Navbar({ navHidden }: NavbarProps) {
               Sign In
             </Link>
             <Link
-              href="/auth/login"
+              href="/auth/login?mode=signup"
               className="bg-[#2563EB] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#1D4ED8] transition-colors"
             >
               Start Here
@@ -156,10 +156,10 @@ export default function Navbar({ navHidden }: NavbarProps) {
                   Sign In
                 </Link>
                 <Link
-                  href="/auth/login"
+                  href="/auth/login?mode=signup"
                   className="bg-[#2563EB] text-white px-4 py-2.5 rounded-lg font-semibold text-center"
                 >
-                  Start Free Trial
+                  Start Here
                 </Link>
               </div>
             </nav>

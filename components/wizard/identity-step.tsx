@@ -1,44 +1,68 @@
-'use client'
+"use client";
 
-import { useState, useRef } from 'react'
-import { useAppStore } from '@/lib/store'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Upload, Building2, Globe, ArrowRight } from 'lucide-react'
+import { useState, useRef } from "react";
+import { useAppStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Upload, Building2, Globe, ArrowRight } from "lucide-react";
 
 export function IdentityStep() {
-  const { setCurrentView, setTenant, user } = useAppStore()
-  const [companyName, setCompanyName] = useState('')
-  const [logo, setLogo] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { setCurrentView, setTenant } = useAppStore();
+  const [companyName, setCompanyName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [isSlugEdited, setIsSlugEdited] = useState(false);
+  const [logo, setLogo] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const workspaceUrl = companyName
-    ? companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
-    : ''
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCompanyName(val);
+
+    // Auto-generate slug only if they haven't manually typed in the slug box
+    if (!isSlugEdited) {
+      setSlug(
+        val
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "-")
+          .replace(/-+/g, "-"),
+      );
+    }
+  };
+
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsSlugEdited(true);
+    setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
-        setLogo(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
+        setLogo(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleContinue = () => {
     setTenant({
       companyName,
-      workspaceUrl: `${workspaceUrl}.onboardly.com`,
+      workspaceUrl: slug, // Sends purely the slug, no .com attached to the state
       logo: logo || undefined,
-      primaryColor: '#6366f1',
-      secondaryColor: '#22c55e',
-    })
-    setCurrentView('wizard-theme')
-  }
+      primaryColor: "#6366f1",
+      secondaryColor: "#22c55e",
+    });
+    setCurrentView("wizard-theme");
+  };
 
   return (
     <Card className="border-border/50 shadow-sm">
@@ -58,17 +82,29 @@ export function IdentityStep() {
             id="companyName"
             placeholder="Acme Corporation"
             value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
+            onChange={handleNameChange}
           />
         </div>
 
         <div className="space-y-2">
-          <Label>Workspace URL</Label>
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-foreground font-mono">
-              {workspaceUrl || 'your-company'}.onboardly.com
-            </span>
+          <Label htmlFor="slugInput">Workspace URL</Label>
+          <div className="relative flex h-10 w-full items-center overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <div className="grid w-full">
+              {/* Ghost layer that positions the solid black .com snugly at the end */}
+              <div className="col-start-1 row-start-1 flex items-center pointer-events-none whitespace-pre">
+                <span className="invisible">{slug || "your-company"}</span>
+                <span className="text-foreground font-medium">.com</span>
+              </div>
+              {/* Interactive input layer placed directly on top */}
+              <input
+                id="slugInput"
+                type="text"
+                value={slug}
+                onChange={handleSlugChange}
+                placeholder="your-company"
+                className="col-start-1 row-start-1 bg-transparent w-full focus:outline-none text-foreground placeholder:text-muted-foreground z-10"
+              />
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             This will be your unique workspace URL
@@ -123,5 +159,5 @@ export function IdentityStep() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
